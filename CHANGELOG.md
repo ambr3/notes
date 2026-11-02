@@ -2,6 +2,12 @@
 
 All notable changes to **Seclusa Notes**.
 
+## 0.2.7 — 2026-11-02
+
+### Changed
+- Distinct B&W notes PWA icon (folded-corner sheet with ruled lines), so
+  the launcher no longer matches Calendar. Regenerable via `tools/make_icons.py`.
+
 ## 0.2.6 — 2026-11-02
 
 ### Fixed
