@@ -2,7 +2,7 @@
   "name": "Seclusa Notes",
   "short_name": "Notes",
   "description": "Privacy-first notes. All data stays on your device.",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "id": "./index.html",
   "start_url": "./index.html",
   "scope": "./",

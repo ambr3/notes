@@ -2,6 +2,12 @@
 
 All notable changes to **Seclusa Notes**.
 
+## 0.2.8 — 2026-11-02
+
+### Fixed
+- Mobile portrait top bar: New no longer clips off-screen; brand can shrink
+  and controls/editor toolbar tighten under 520px.
+
 ## 0.2.7 — 2026-11-02
 
 ### Changed
