@@ -13,7 +13,18 @@ const store = {
     const notes = await db.getAll("notes");
     const labels = await db.getAll("labels");
     const meta = await db.getMeta("nextId");
-    this.notes = new Map(notes.map((n) => [n.id, n]));
+    // Re-check shape and drawings: IndexedDB is attacker-writable from the
+    // same origin, and older rows may predate the import validators.
+    this.notes = new Map(notes.map((raw) => {
+      const n = raw && typeof raw === "object" ? raw : { id: 0 };
+      if (!n.metadata || typeof n.metadata !== "object") n.metadata = blankMetadata();
+      if (!Array.isArray(n.labels)) n.labels = [];
+      normalizeNote(n);
+      if (n.type === TYPE.DRAW && n.metadata && n.metadata.kind === "draw") {
+        n.metadata = { kind: "draw", data: validDrawing(n.metadata.data) };
+      }
+      return [n.id, n];
+    }));
     this.labels = new Map(labels.map((l) => [l.id, l]));
     this.nextId = meta || this._inferNextId();
     const view = await db.getMeta("view");
@@ -293,25 +304,43 @@ const reminders = {
       }
     } catch (e) { /* fall through to the page-level API */ }
     if (this.permission === "granted") {
-      try { new Notification(title, { body, tag: "note-" + note.id, icon: "icon-192.png" }); }
-      catch (e) { /* the platform refused; nothing useful to report */ }
+      try {
+        const n = new Notification(title, {
+          body, tag: "note-" + note.id, icon: "icon-192.png",
+          data: { noteId: note.id },
+        });
+        // Page-level notifications never hit sw.js notificationclick.
+        n.onclick = () => {
+          try { window.focus(); } catch (e) { /* ignore */ }
+          if (typeof openEditor === "function" && store.notes.has(note.id)) {
+            openEditor(note.id);
+          }
+        };
+      } catch (e) { /* the platform refused; nothing useful to report */ }
     }
   },
 
   /* Called on launch and whenever the app returns to the foreground. Anything
-     whose time passed while the app was shut fires now, once. */
+     whose time passed while the app was shut fires now, once.
+
+     Notify before advancing: catchUpReminders() would move a recurring series
+     into the future first, and the loop below would then skip it as not due. */
   async catchUp() {
-    await store.catchUpReminders();
     const now = Date.now();
+    const overdue = [];
     for (const note of store.withReminder()) {
       const r = note.reminder;
       if (r.done || r.next > now) continue;
-      const key = reminderKey(note.id, r.next);
+      overdue.push({ note, next: r.next });
+    }
+    for (const { note, next } of overdue) {
+      const key = reminderKey(note.id, next);
       if (this._fired.has(key)) continue;
       this._fired.add(key);
       if (this._fired.size > 200) this._fired = new Set([...this._fired].slice(-100));
       await this.show(note);
     }
+    await store.catchUpReminders();
     this.reschedule();
   },
 
@@ -523,113 +552,133 @@ async function importData(text) {
     }
   }
 
-  // Labels: match by id, then by name, renaming on collision.
-  const nameMap = new Map();
-  for (const l of store.labels.values()) nameMap.set(l.name, l);
-  const idMap = new Map();
-  const newLabels = [];
-  for (const [rawId, l] of labelEntries) {
-    if (!l || typeof l !== "object") continue;
-    const id = Number(rawId);
-    if (!Number.isSafeInteger(id) || id < 0) continue;
-    const name = clampText(l.name, IMPORT_MAX_LABEL_NAME).trim().replace(/\s+/g, " ");
-    if (!name) continue;
-    const existingById = store.labels.get(id);
-    if (existingById) {
-      if (name === existingById.name) { idMap.set(id, existingById.id); continue; }
-      // Same id, different name: keep the existing label and add the imported
-      // name under a fresh id (renamed if that name is already taken).
-      let candidate = name, n = 2;
-      while (nameMap.has(candidate)) candidate = name + " (" + n++ + ")";
-      const created = { id: 0, name: candidate, hidden: false };
+  // Build the whole merge in memory, then write once. A mid-import db failure
+  // used to leave labels committed and notes half-applied; the snapshot below
+  // rolls the in-memory store back if the transaction aborts.
+  const snapNotes = new Map(store.notes);
+  const snapLabels = new Map(store.labels);
+  const snapNextId = store.nextId;
+  const labelPuts = [];
+  const notePuts = [];
+
+  try {
+    // Labels: match by id, then by name, renaming on collision.
+    const nameMap = new Map();
+    for (const l of store.labels.values()) nameMap.set(l.name, l);
+    const idMap = new Map();
+    const newLabels = [];
+    for (const [rawId, l] of labelEntries) {
+      if (!l || typeof l !== "object") continue;
+      const id = Number(rawId);
+      if (!Number.isSafeInteger(id) || id < 0) continue;
+      const name = clampText(l.name, IMPORT_MAX_LABEL_NAME).trim().replace(/\s+/g, " ");
+      if (!name) continue;
+      const existingById = store.labels.get(id);
+      if (existingById) {
+        if (name === existingById.name) { idMap.set(id, existingById.id); continue; }
+        // Same id, different name: keep the existing label and add the imported
+        // name under a fresh id (renamed if that name is already taken).
+        let candidate = name, n = 2;
+        while (nameMap.has(candidate)) candidate = name + " (" + n++ + ")";
+        const created = { id: 0, name: candidate, hidden: false };
+        newLabels.push(created);
+        idMap.set(id, "@new:" + (newLabels.length - 1));
+        continue;
+      }
+      const existingByName = nameMap.get(name);
+      if (existingByName) {
+        // Same name already here: point imported notes at the existing label.
+        idMap.set(id, existingByName.id);
+        continue;
+      }
+      const created = { id, name, hidden: l.hidden === true };
       newLabels.push(created);
-      idMap.set(id, "@new:" + (newLabels.length - 1));
-      continue;
+      idMap.set(id, id);
     }
-    const existingByName = nameMap.get(name);
-    if (existingByName) {
-      // Same name already here: point imported notes at the existing label.
-      idMap.set(id, existingByName.id);
-      continue;
+    for (const l of newLabels) {
+      if (l.id === 0) { l.id = store.nextId++; }
+      store.labels.set(l.id, l);
+      nameMap.set(l.name, l);
+      labelPuts.push(l);
     }
-    const created = { id, name, hidden: l.hidden === true };
-    newLabels.push(created);
-    idMap.set(id, id);
-  }
-  for (const l of newLabels) {
-    if (l.id === 0) { l.id = store.nextId++; }
-    store.labels.set(l.id, l);
-    nameMap.set(l.name, l);
-    await db.put("labels", l);
-  }
-  // Resolve the "@new:index" indirections now that the new labels have their
-  // real ids, so imported notes keep the labels that had to be renamed.
-  for (const [oldId, val] of idMap) {
-    if (typeof val === "string" && val.startsWith("@new:")) {
-      const idx = Number(val.slice(5)); // "@new:" is 5 chars
-      if (Number.isInteger(idx) && idx >= 0 && idx < newLabels.length) {
-        idMap.set(oldId, newLabels[idx].id);
-      } else {
-        idMap.delete(oldId);
+    // Resolve the "@new:index" indirections now that the new labels have their
+    // real ids, so imported notes keep the labels that had to be renamed.
+    for (const [oldId, val] of idMap) {
+      if (typeof val === "string" && val.startsWith("@new:")) {
+        const idx = Number(val.slice(5)); // "@new:" is 5 chars
+        if (Number.isInteger(idx) && idx >= 0 && idx < newLabels.length) {
+          idMap.set(oldId, newLabels[idx].id);
+        } else {
+          idMap.delete(oldId);
+        }
       }
     }
-  }
 
-  db.setMetaSafe("nextId", store.nextId);
-
-  // Notes: skip or merge by id, reassign ranks that are missing or taken.
-  const usedRanks = new Set();
-  for (const n of store.notes.values()) usedRanks.add(n.rank);
-  let inserted = 0, merged = 0, renamed = 0, skipped = 0;
-  let lowest = null;
-  for (const n of store.notes.values()) {
-    const r = rankOf(n);
-    if (lowest === null || r.compareTo(lowest) < 0) lowest = r;
-  }
-  for (const [rawId, s] of noteEntries) {
-    const id = Number(rawId);
-    if (!Number.isSafeInteger(id) || id < 0) continue;
-    let note;
-    try { note = fromSurrogate(s); }
-    catch (e) { skipped++; continue; }
-    note.labels = note.labels.map((l) => idMap.get(l))
-      .filter((l) => typeof l === "number");
-    if (!note.rank || usedRanks.has(note.rank)) {
-      note.rank = FractionalIndex.insert(null, lowest).toB64();
-      lowest = rankOf(note);
+    // Notes: skip or merge by id, reassign ranks that are missing or taken.
+    const usedRanks = new Set();
+    for (const n of store.notes.values()) usedRanks.add(n.rank);
+    let inserted = 0, merged = 0, renamed = 0, skipped = 0;
+    let lowest = null;
+    for (const n of store.notes.values()) {
+      const r = rankOf(n);
+      if (lowest === null || r.compareTo(lowest) < 0) lowest = r;
     }
-    usedRanks.add(note.rank);
+    for (const [rawId, s] of noteEntries) {
+      const id = Number(rawId);
+      if (!Number.isSafeInteger(id) || id < 0) continue;
+      let note;
+      try { note = fromSurrogate(s); }
+      catch (e) { skipped++; continue; }
+      note.labels = note.labels.map((l) => idMap.get(l))
+        .filter((l) => typeof l === "number");
+      if (!note.rank || usedRanks.has(note.rank)) {
+        note.rank = FractionalIndex.insert(null, lowest).toB64();
+        lowest = rankOf(note);
+      }
+      usedRanks.add(note.rank);
 
-    const existing = store.notes.get(id);
-    if (!existing) {
-      note.id = id === 0 ? store.nextId++ : id;
-      if (note.id >= store.nextId) store.nextId = note.id + 1;
-      store.notes.set(note.id, note);
-      await db.put("notes", note);
-      inserted++;
-    } else if (existing.added === note.added && existing.modified === note.modified) {
-      const mergedNote = {
-        ...note,
-        id: existing.id,
-        // A reminder on either side wins; disagreeing reminders do not merge.
-        reminder: existing.reminder && note.reminder &&
-          existing.reminder.start !== note.reminder.start ? existing.reminder
-          : note.reminder || existing.reminder,
-        labels: [...new Set([...note.labels, ...existing.labels])],
-      };
-      store.notes.set(mergedNote.id, mergedNote);
-      await db.put("notes", mergedNote);
-      merged++;
-    } else {
-      note.id = store.nextId++;
-      store.notes.set(note.id, note);
-      await db.put("notes", note);
-      renamed++;
+      const existing = store.notes.get(id);
+      if (!existing) {
+        note.id = id === 0 ? store.nextId++ : id;
+        if (note.id >= store.nextId) store.nextId = note.id + 1;
+        store.notes.set(note.id, note);
+        notePuts.push(note);
+        inserted++;
+      } else if (existing.added === note.added && existing.modified === note.modified) {
+        const mergedNote = {
+          ...note,
+          id: existing.id,
+          // A reminder on either side wins; disagreeing reminders do not merge.
+          reminder: existing.reminder && note.reminder &&
+            existing.reminder.start !== note.reminder.start ? existing.reminder
+            : note.reminder || existing.reminder,
+          labels: [...new Set([...note.labels, ...existing.labels])],
+        };
+        store.notes.set(mergedNote.id, mergedNote);
+        notePuts.push(mergedNote);
+        merged++;
+      } else {
+        note.id = store.nextId++;
+        store.notes.set(note.id, note);
+        notePuts.push(note);
+        renamed++;
+      }
     }
+
+    await db.tx(["notes", "labels", "meta"], "readwrite", (ns, ls, ms) => {
+      for (const l of labelPuts) ls.put(l);
+      for (const n of notePuts) ns.put(n);
+      ms.put(store.nextId, "nextId");
+    });
+
+    store.emit();
+    return { inserted, merged, renamed, skipped, labels: newLabels.length, futureVersion: version > EXPORT_VERSION };
+  } catch (e) {
+    store.notes = snapNotes;
+    store.labels = snapLabels;
+    store.nextId = snapNextId;
+    throw e;
   }
-  db.setMetaSafe("nextId", store.nextId);
-  store.emit();
-  return { inserted, merged, renamed, skipped, labels: newLabels.length, futureVersion: version > EXPORT_VERSION };
 }
 
 /* ------------------------------------------------------------------- toast */

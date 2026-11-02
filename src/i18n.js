@@ -64,6 +64,7 @@ const DICTIONARIES = {
     toast_copied: "Copied to clipboard", toast_share_failed: "Could not share",
     toast_import_failed: "Could not read that file.",
     toast_dates_reset: "Dates reset to now",
+    toast_modified_now: "Modified date set to now",
     toast_storage_unavailable: "Storage unavailable, notes will not be saved.",
     toast_filter_cleared: "Filters cleared", toast_too_large: "That file is too large to import.",
     toast_undo: "Undone", toast_redo: "Redone", toast_nothing_undo: "Nothing to undo",

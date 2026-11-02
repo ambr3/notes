@@ -201,19 +201,18 @@ function wire() {
   $("row-type").onclick = convertNote;
   $("row-save-date").onclick = async () => {
     if (!editing || editingId === null) return;
-    // doFlush deliberately preserves the stored created date, so the reset has
-    // to go through the store rather than only mutating the draft.
+    // Only the modified stamp: created stays put. doFlush also preserves
+    // added, so this has to go through the store rather than the draft alone.
     const stamp = Date.now();
     editing.modified = stamp;
     await act(tr("action_edit_note"), () => store.put({
-      ...editing, id: editingId, added: stamp, modified: stamp,
+      ...editing, id: editingId, added: editing.added, modified: stamp,
       rank: editing.rank, status: editing.status, pinned: editing.pinned,
       reminder: editing.reminder,
     }), "note:" + editingId);
-    editing.added = stamp;
-    $("v-added").textContent = showDate(editing.added);
     $("v-modified").textContent = showDate(editing.modified);
-    toast(tr("toast_dates_reset"));
+    if (typeof showMetaSummary === "function") showMetaSummary();
+    toast(tr("toast_modified_now"));
   };
 
   $("edit-title").oninput = () => { autosize($("edit-title")); collectFromInputs(); };

@@ -860,34 +860,45 @@ function flushEditor(label) {
 }
 
 async function doFlush(label) {
+  // Cleared up front so keystrokes during the await can set dirty again. On
+  // failure it is restored below so closeEditor / the 4s sweep still retry.
   editorDirty = false;
   // Re-read the title from the field so a list/draw flush cannot keep a stale
   // value if an input event was missed.
   const titleEl = $("edit-title");
   if (titleEl) editing.title = titleEl.value;
   const t = $("v-modified");
+  const prevModified = editing.modified;
   editing.modified = Date.now();
   t.textContent = showDate(editing.modified);
   showMetaSummary();
-  if (editingId === null) {
-    if (isNoteBlank(editing)) return;
-    // The first save of a new note is what creates it, so that is the step
-    // undo must reverse, not just the later edits.
-    const saved = await act(tr("action_new_note_undo"),
-      () => store.put(JSON.parse(JSON.stringify(editing))));
-    editing = { ...saved, labels: saved.labels.slice() };
-    editingId = saved.id;
-    return;
+  try {
+    if (editingId === null) {
+      if (isNoteBlank(editing)) return;
+      // The first save of a new note is what creates it, so that is the step
+      // undo must reverse, not just the later edits.
+      const saved = await act(tr("action_new_note_undo"),
+        () => store.put(JSON.parse(JSON.stringify(editing))));
+      editing = { ...saved, labels: saved.labels.slice() };
+      editingId = saved.id;
+      return;
+    }
+    const existing = store.notes.get(editingId);
+    if (!existing) return;
+    // The editor's own reminder is authoritative here. syncEditorReminder keeps
+    // it current when the scheduler advances a series in the background, so
+    // reading the stored copy instead would discard whatever the user just set.
+    await act(label || tr("action_edit_note"), () =>
+      store.put({ ...editing, id: editingId, added: existing.added, rank: existing.rank,
+        status: editing.status, pinned: editing.pinned, reminder: editing.reminder }),
+      "note:" + editingId);
+  } catch (e) {
+    editing.modified = prevModified;
+    t.textContent = showDate(editing.modified);
+    showMetaSummary();
+    editorDirty = true;
+    throw e;
   }
-  const existing = store.notes.get(editingId);
-  if (!existing) return;
-  // The editor's own reminder is authoritative here. syncEditorReminder keeps
-  // it current when the scheduler advances a series in the background, so
-  // reading the stored copy instead would discard whatever the user just set.
-  await act(label || tr("action_edit_note"), () =>
-    store.put({ ...editing, id: editingId, added: existing.added, rank: existing.rank,
-      status: editing.status, pinned: editing.pinned, reminder: editing.reminder }),
-    "note:" + editingId);
 }
 
 async function closeEditor() {

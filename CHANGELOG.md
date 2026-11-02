@@ -2,6 +2,18 @@
 
 All notable changes to **Seclusa Notes**.
 
+## 0.2.6 — 2026-11-02
+
+### Fixed
+- Recurring reminders that fired while the app was closed now notify on
+  reopen (catch-up no longer advances the series before showing).
+- A failed editor save keeps the note dirty so close/retry cannot drop edits.
+- The Modified control only updates the modified stamp (created stays put).
+- Page-level reminder notifications open the note when tapped.
+- Backup import writes labels and notes in one IndexedDB transaction and
+  rolls the in-memory store back if that write fails.
+- Notes loaded from IndexedDB are normalised; drawing payloads are revalidated.
+
 ## 0.2.5 — 2026-11-02
 
 ### Changed
