@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Seclusa Notes — privacy-first notes. All data stays on your device.">
+<meta name="referrer" content="no-referrer">
+<meta
+  http-equiv="Content-Security-Policy"
+  content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; worker-src 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
+<meta
+  http-equiv="Permissions-Policy"
+  content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), midi=(), serial=(), display-capture=(), accelerometer=(), gyroscope=(), magnetometer=(), idle-detection=(), screen-wake-lock=()">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Seclusa Notes">
+<title>Seclusa Notes</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="src/theme-boot.js"></script>
+<link rel="stylesheet" href="seclusa-base.css?v=0.2.5">
+<link rel="stylesheet" href="app.css?v=0.2.5">
+</head>
+<body class="pane-notes">
+
+<section id="pane-notes" class="app-pane" aria-label="Notes">
+<header class="topbar">
+  <div class="topbar-row">
+    <button type="button" class="menupill" id="btn-menu" data-i18n-title="action_menu" aria-label="Menu" aria-haspopup="dialog" aria-controls="sheet-main">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <h1 class="brand" id="brand">Notes</h1>
+    <button type="button" class="menupill" id="btn-search" data-i18n-title="action_search" aria-label="Search" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    </button>
+    <button type="button" class="menupill" id="btn-select" data-i18n-title="action_select" aria-label="Select notes" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/></svg>
+    </button>
+    <button type="button" class="accentpill" id="btn-new-pill" data-i18n-title="action_new_note" aria-label="New note" title="New note">New</button>
+  </div>
+  <div class="searchbar" id="searchbar">
+    <input type="search" id="search-input" data-i18n-placeholder="action_search" placeholder="Search notes" autocomplete="off">
+    <button class="iconbtn" id="btn-search-close" aria-label="Close search">
+      <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Notes folders">
+    <button class="tab" role="tab" data-status="0" aria-selected="true"><span data-i18n="tab_notes">Notes</span> <span class="count" id="count-0"></span></button>
+    <button class="tab" role="tab" data-status="1" aria-selected="false"><span data-i18n="tab_archive">Archive</span> <span class="count" id="count-1"></span></button>
+    <button class="tab" role="tab" data-status="2" aria-selected="false"><span data-i18n="tab_trash">Trash</span> <span class="count" id="count-2"></span></button>
+  </div>
+  <div class="labels" id="labels"><select id="label-filter" class="label-select" aria-label="Filter by label"></select></div>
+  <div class="selectbar" id="select-bar" hidden>
+    <button type="button" class="iconbtn" id="btn-select-cancel" data-i18n-title="action_cancel" aria-label="Cancel selection">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <span class="select-count" id="select-count" aria-live="polite"></span>
+    <span class="spacer"></span>
+    <button type="button" class="chip" id="btn-select-all" data-i18n="action_select_all">All</button>
+    <button type="button" class="chip" id="sel-archive" data-i18n="sel_archive">Archive</button>
+    <button type="button" class="chip" id="sel-restore" data-i18n="sel_restore" hidden>Restore</button>
+    <button type="button" class="chip" id="sel-trash" data-i18n="sel_trash">Trash</button>
+    <button type="button" class="chip" id="sel-forever" data-i18n="action_delete_forever" hidden>Delete permanently</button>
+  </div>
+</header>
+
+<main role="tabpanel" id="tabpanel" aria-live="polite">
+  <div class="list" id="list"></div>
+  <div class="empty" id="empty" hidden>
+    <svg viewBox="0 0 24 24"><path d="M5 4h9l5 5v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M14 4v5h5"/></svg>
+    <div id="empty-text">No notes yet</div>
+  </div>
+</main>
+
+<section class="editor" id="editor" aria-hidden="true">
+  <div class="editor-bar">
+    <button class="iconbtn" id="btn-close-editor" data-i18n-title="action_back" aria-label="Back">
+      <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <button class="iconbtn" id="btn-pin" data-i18n-title="action_pin" aria-label="Pin note" aria-pressed="false">
+      <svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z"/></svg>
+    </button>
+    <button class="iconbtn" id="btn-convert" data-i18n-title="action_convert" aria-label="Cycle note type">
+      <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6l1 1 2-2M3 12h3M3 18l1-1 2 2"/></svg>
+    </button>
+    <button type="button" class="accentpill" id="btn-draw-pill" data-i18n="action_draw">Draw</button>
+    <span class="spacer"></span>
+    <button class="iconbtn" id="btn-archive" data-i18n-title="action_archive" aria-label="Archive note">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>
+    </button>
+    <button class="iconbtn" id="btn-delete" data-i18n-title="action_delete" aria-label="Delete note">
+      <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>
+    </button>
+    <button class="iconbtn" id="btn-note-menu" data-i18n-title="action_note_options" aria-label="Note options">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+    </button>
+  </div>
+  <div class="editor-scroll">
+    <div class="write-pill editor-inner">
+      <textarea id="edit-title" rows="1" data-i18n-placeholder="sort_title" placeholder="Title" autocomplete="off"></textarea>
+      <div id="list-editor" class="list-editor" hidden></div>
+      <div id="draw-editor" class="draw-editor" hidden></div>
+      <textarea id="edit-content" rows="1" placeholder="Write your note…" autocomplete="off"></textarea>
+    </div>
+    <details class="meta-menu" id="meta-menu">
+      <summary class="meta-summary"><span class="k">Details</span><span class="v" id="meta-summary"></span></summary>
+    <div class="meta-pills" role="group" aria-label="Note options">
+      <button type="button" class="meta-pill" id="row-labels">
+        <span class="k" data-i18n="action_labels">Labels</span>
+        <span class="v" id="v-labels">None</span>
+      </button>
+      <button type="button" class="meta-pill" id="row-reminder">
+        <span class="k" data-i18n="action_reminder">Reminder</span>
+        <span class="v" id="v-reminder">None</span>
+      </button>
+      <button type="button" class="meta-pill" id="row-type">
+        <span class="k" data-i18n="action_type">Type</span>
+        <span class="v" id="v-type">Text</span>
+      </button>
+      <button type="button" class="meta-pill" id="row-save-date">
+        <span class="k" data-i18n="action_modified">Modified</span>
+        <span class="v" id="v-modified"></span>
+      </button>
+      <div class="meta-pill meta-pill-static">
+        <span class="k" data-i18n="action_created">Created</span>
+        <span class="v" id="v-added"></span>
+      </div>
+    </div>
+    </details>
+  </div>
+</section>
+
+<div class="sheet" id="sheet-main" role="dialog" aria-modal="false" aria-label="Menu" aria-hidden="true">
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <h3>Notes</h3>
+
+  <button class="row" id="mi-reminders"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.3 20a2 2 0 0 0 3.4 0"/></svg><span id="mi-reminders-text">Enable reminders</span></button>
+  <p class="note" data-i18n="note_reminders_limit">Reminders can only fire while this app is open. Anything due while it was closed is shown the next time you open it.</p>
+  <button class="row" id="mi-clear-filter" hidden><svg viewBox="0 0 24 24"><path d="M4 5h16l-6 7v6l-4 2v-8z"/></svg><span data-i18n="action_clear_filters">Clear search and label filter</span></button>
+  <button class="row" id="mi-sort"><svg viewBox="0 0 24 24"><path d="M4 6h10M4 12h7M4 18h4"/><path d="M17 8v10M17 18l-3-3M17 18l3-3"/></svg><span data-i18n="action_sort_order">Sort order</span></button>
+  <div class="sep"></div>
+  <button class="row" id="mi-undo"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H9"/></svg><span data-i18n="action_undo">Undo</span></button>
+  <button class="row" id="mi-redo"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h6"/></svg><span data-i18n="action_redo">Redo</span></button>
+  <div class="sep"></div>
+  <button class="row danger" id="mi-erase"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg><span data-i18n="action_erase_all">Erase all notes</span></button>
+  <p class="note">Export or restore a backup from the <strong>Backup</strong> tab.</p>
+</div>
+
+<div class="sheet" id="sheet-sort" role="dialog" aria-modal="false" aria-label="Sort" aria-hidden="true">
+  <h3 data-i18n="sort_by">Sort by</h3>
+  <button class="row" data-sortfield="2"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h4"/></svg><span data-i18n="sort_title">Title</span></button>
+  <button class="row" data-sortfield="1"><svg viewBox="0 0 24 24"><path d="M12 7v10l3-3M12 17l-3-3"/><path d="M4 4v16"/></svg><span data-i18n="sort_modified">Last modified</span></button>
+  <button class="row" data-sortfield="0"><svg viewBox="0 0 24 24"><path d="M12 17V7l-3 3M12 7l3 3"/><path d="M4 20V4"/></svg><span data-i18n="sort_created">Date created</span></button>
+  <button class="row" data-sortfield="3"><svg viewBox="0 0 24 24"><path d="M8 8h13M8 8L5 5M8 8L5 11"/><path d="M5 16h13M18 16l3-3M18 16l3 3"/></svg><span data-i18n="sort_manual">Manual</span></button>
+  <div class="sep"></div>
+  <h3 data-i18n="direction">Direction</h3>
+  <button class="row" data-sortdir="0"><svg viewBox="0 0 24 24"><path d="M12 19V5M12 5L6 11M12 5l6 6"/></svg><span data-i18n="direction_ascending">Ascending</span></button>
+  <button class="row" data-sortdir="1"><svg viewBox="0 0 24 24"><path d="M12 5v14M12 19l-6-6M12 19l6-6"/></svg><span data-i18n="direction_descending">Descending</span></button>
+</div>
+
+<div class="sheet" id="sheet-labels" role="dialog" aria-modal="false" aria-label="Labels" aria-hidden="true">
+  <h3 data-i18n="action_labels">Labels</h3>
+  <div id="label-list"></div>
+  <div class="sep"></div>
+  <div class="field">
+    <input type="text" id="new-label" class="text-field" placeholder="New label" data-i18n-placeholder="action_new_label" autocomplete="off">
+    <button class="iconbtn" id="btn-add-label" aria-label="Add label">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet-reminder" role="dialog" aria-modal="false" aria-label="Reminder" aria-hidden="true">
+  <h3 data-i18n="action_reminder">Reminder</h3>
+  <div class="field">
+    <label for="rem-date" data-i18n="reminder_date">Date</label>
+    <input type="date" id="rem-date" class="dt-field">
+  </div>
+  <div class="field">
+    <label for="rem-time" data-i18n="reminder_time">Time</label>
+    <input type="time" id="rem-time" class="dt-field">
+  </div>
+  <div class="field">
+    <label for="rem-repeat" data-i18n="reminder_repeat">Repeat</label>
+    <select id="rem-repeat">
+      <option value="" data-i18n="reminder_no_repeat">Does not repeat</option>
+      <option value="DAILY" data-i18n="reminder_daily">Daily</option>
+      <option value="WEEKLY" data-i18n="reminder_weekly">Weekly</option>
+      <option value="MONTHLY_DATE" data-i18n="reminder_monthly_date">Monthly on this date</option>
+      <option value="MONTHLY_WEEKDAY" data-i18n="reminder_monthly_weekday">Monthly on this weekday</option>
+      <option value="YEARLY" data-i18n="reminder_yearly">Yearly</option>
+    </select>
+  </div>
+  <div class="field" id="rem-weekdays-wrap" hidden>
+    <label data-i18n="reminder_repeat_on">Repeat on</label>
+    <div class="chip-row" id="rem-weekdays"></div>
+  </div>
+  <div class="note rem-preview" id="rem-preview"></div>
+  <div class="sep"></div>
+  <button class="row" id="rem-save"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg><span data-i18n="reminder_save">Save reminder</span></button>
+  <button class="row" id="rem-done"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="reminder_mark_done">Mark as done</span></button>
+  <button class="row" id="rem-postpone"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span data-i18n="reminder_postpone">Postpone 1 day</span></button>
+  <div class="sep"></div>
+  <button class="row danger" id="rem-remove"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg><span data-i18n="reminder_remove">Remove reminder</span></button>
+</div>
+
+<div class="sheet" id="sheet-note" role="dialog" aria-modal="false" aria-label="Note" aria-hidden="true">
+  <h3 data-i18n="action_note_options">Note</h3>
+  <button class="row" id="ni-duplicate"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span data-i18n="action_duplicate">Duplicate</span></button>
+  <button class="row" id="ni-share"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="17" cy="6" r="2.5"/><circle cx="17" cy="18" r="2.5"/><path d="M8.2 10.8l6.6-3.6M8.2 13.2l6.6 3.6"/></svg><span data-i18n="action_share">Share as text</span></button>
+  <div class="sep"></div>
+  <button class="row danger" id="ni-delete"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg><span data-i18n="action_delete">Delete</span></button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="dlg-password">
+  <h3 id="pw-title">Set a password</h3>
+  <div class="body">
+    <div id="pw-text">The export is encrypted with this password. There is no way to recover the notes without it.</div>
+    <input type="password" id="pw-input" autocomplete="current-password">
+  </div>
+  <div class="acts">
+    <button class="ghost" id="pw-cancel">Cancel</button>
+    <button class="primary" id="pw-ok">Continue</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-confirm">
+  <h3 id="cf-title">Are you sure?</h3>
+  <div class="body" id="cf-text"></div>
+  <div class="acts">
+    <button class="ghost" id="cf-cancel">Cancel</button>
+    <button class="primary" id="cf-ok">Continue</button>
+  </div>
+</dialog>
+</section>
+
+<div class="scrim" id="scrim"></div>
+
+<div class="sheet" id="sheet-about" role="dialog" aria-modal="false" aria-label="About" aria-hidden="true">
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <h3>About</h3>
+  <div class="about-body">
+    <p class="about-title">Seclusa Notes</p>
+    <p class="about-version">Version 0.2.5</p>
+    <p>Private notes. Everything stays on this device — no accounts, no tracking, no servers.</p>
+    <h4>Licence</h4>
+    <p><strong>Apache-2.0.</strong> Derived from <strong>Another notes app</strong> by maltaisn
+      (<a href="https://github.com/maltaisn/another-notes-app">github.com/maltaisn/another-notes-app</a>);
+      the notes schema and ranking remain compatible. Not relicensed.</p>
+    <p>Details in the <a href="README.md">README</a> and <a href="PRIVACY_POLICY.md">privacy policy</a>.</p>
+    <h4>Privacy</h4>
+    <p>No analytics, cookies, or network calls for your notes after the app shell is loaded.</p>
+    <h4>Backup</h4>
+    <p class="about-warn"><strong>Back up regularly.</strong> Everything lives only in this browser. If you clear site data, cookies, or the browser cache, <strong>all notes are permanently deleted</strong> and cannot be recovered without a backup file.</p>
+    <p>Use the <strong>Backup</strong> sheet to save or restore your notes (optional encryption).</p>
+  </div>
+</div>
+
+<div class="sheet" id="sheet-backup" role="dialog" aria-modal="false" aria-label="Backup" aria-hidden="true">
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <h3>Backup</h3>
+  <p class="note">One JSON file with your notes and labels. Stored only where you save or share it.</p>
+  <p class="note about-warn"><strong>Warning:</strong> clearing browser data deletes everything. Export a backup before clearing or switching devices.</p>
+  <button class="row" id="bu-export">
+    <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg>
+    <span>Export backup</span>
+  </button>
+  <button class="row" id="bu-export-enc">
+    <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    <span>Export encrypted backup</span>
+  </button>
+  <p class="note">Encrypted backups use <strong>AES-256-GCM</strong> with a key from <strong>PBKDF2-HMAC-SHA512</strong> (210,000 iterations). Your password is never stored; if you lose it, the file cannot be opened.</p>
+  <button class="row" id="bu-share-enc" hidden>
+    <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/><path d="M16 6h4M18 4v4"/></svg>
+    <span>Share encrypted backup…</span>
+  </button>
+  <p class="note">Share or save the file wherever you keep backups. This app never holds a folder handle; the copy only exists where you put it.</p>
+  <button class="row" id="bu-import">
+    <svg viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg>
+    <span>Restore backup</span>
+  </button>
+</div>
+
+<nav id="app-nav" aria-label="App">
+  <button type="button" class="app-nav-btn" data-pane="notes" aria-current="page">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h9l5 5v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M14 4v5h5"/></svg>
+    <span>Notes</span>
+  </button>
+  <button type="button" class="app-nav-btn" id="theme-toggle" aria-pressed="false" title="Switch theme">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z"/></svg>
+    <span id="theme-toggle-label">System</span>
+  </button>
+  <button type="button" class="app-nav-btn" data-action="backup" id="nav-backup" aria-haspopup="dialog" aria-controls="sheet-backup">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg>
+    <span>Backup</span>
+  </button>
+  <button type="button" class="app-nav-btn" data-action="about" id="nav-about" aria-haspopup="dialog" aria-controls="sheet-about">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/></svg>
+    <span>About</span>
+  </button>
+</nav>
+
+<input type="file" id="backup-file-input" accept="application/json,.json,.enc.json" hidden>
+<script src="src/core.js"></script>
+<script src="src/crypto.js"></script>
+<script src="src/recurrence.js"></script>
+<script src="src/i18n.js"></script>
+<script src="src/db.js"></script>
+<script src="src/store.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/main.js"></script>
+<script src="src/backup.js"></script>
+<script src="src/shell.js"></script>
+</body>
+</html>

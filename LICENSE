@@ -1,0 +1,15 @@
+Seclusa Notes — licensing
+=========================
+
+The notes code is derived from Another notes app by maltaisn and is used under
+the Apache License 2.0. It is not relicensed.
+
+  → Apache License 2.0
+  → see LICENSE-APACHE-2.0.txt
+  → upstream: https://github.com/maltaisn/another-notes-app
+
+Bundled DM Sans and Sora fonts retain their SIL Open Font License 1.1 terms;
+their notices are in assets/fonts/.
+
+When distributing the app, keep the Apache notices for the notes code and
+include the SIL Open Font License notices for the fonts.
