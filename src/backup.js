@@ -1,20 +1,31 @@
-/* Seclusa Notes backup: notes in one file, optional encryption. */
+/* Seclusa Notes backup: notes in one file, optional encryption.
+   Share and Save are separate actions (no silent fallback between them). */
 (function () {
   const FORMAT = "seclusa-notes";
   /* Older combined notes+calendar backups used this name. They still restore
      here: the notes come back and the calendar half is ignored. */
   const LEGACY_FORMAT = "seclusa-nocal";
   const VERSION = 1;
+  const LAST_KEY = "seclusa-notes-last-backup";
 
   function stamp() {
-    const d = new Date();
-    return (
-      d.getFullYear() +
-      "-" +
-      String(d.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(d.getDate()).padStart(2, "0")
-    );
+    return backupDateStamp();
+  }
+
+  function refreshBackupMeta() {
+    const label = document.getElementById("bu-last");
+    const nag = document.getElementById("bu-nag");
+    if (label) label.textContent = lastBackupLabel(LAST_KEY);
+    if (nag) {
+      const text = lastBackupNagText(LAST_KEY);
+      nag.textContent = text;
+      nag.hidden = !text;
+    }
+  }
+
+  function markBackupDone() {
+    lastBackupMark(LAST_KEY);
+    refreshBackupMeta();
   }
 
   /* Wrapper the importer recognises. `notes` holds the Another-notes-app
@@ -28,9 +39,7 @@
     };
   }
 
-  /* Share or download a file the user picks. The app never keeps a folder
-     handle — the choice happens once per export. */
-  async function shareBackup(encrypted) {
+  async function preparePayload(encrypted) {
     const payload = buildBackup();
     let text = JSON.stringify(payload, null, 1);
     let name = "seclusa-notes-" + stamp() + ".json";
@@ -39,10 +48,10 @@
     if (encrypted) {
       if (!cryptoBox.supported) {
         toast(tr("toast_encryption_unavailable"));
-        return;
+        return null;
       }
       const password = await promptNewPassword();
-      if (!password) return;
+      if (!password) return null;
       try {
         toast(tr("toast_encrypting"));
         const box = await cryptoBox.encrypt(text, password);
@@ -51,57 +60,40 @@
         type = "application/octet-stream";
       } catch (e) {
         toast(e instanceof BadData ? e.message : tr("toast_backup_failed"));
-        return;
+        return null;
       }
     }
+    return { text, name, type, encrypted: !!encrypted };
+  }
 
-    const file = new File([text], name, { type });
-    if (typeof navigator.share === "function") {
-      try {
-        // No target named: the browser decides, the same way the note share
-        // already works (see main.js ni-share). Share only the file: some
-        // implementations reject mixed payloads.
-        await navigator.share({ files: [file] });
-        return;
-      } catch (e) {
-        if (e && e.name === "AbortError") return;
-        // Anything else falls through to the download, which always works.
-      }
+  async function shareBackup(encrypted) {
+    const prepared = await preparePayload(encrypted);
+    if (!prepared) return;
+    const file = new File([prepared.text], prepared.name, { type: prepared.type });
+    const result = await shareFile(file);
+    if (result === "shared") {
+      markBackupDone();
+      toast(prepared.encrypted ? tr("toast_backup_shared_enc") : tr("toast_backup_shared"));
+      return;
     }
-
-    const how = await saveBlob(new Blob([text], { type }), name);
-    if (how === null) return;
-    toast(encrypted ? tr("toast_backup_downloaded_enc") : tr("toast_backup_downloaded"));
+    if (result === "abort") return;
+    toast(tr("toast_share_unavailable"));
   }
 
   async function exportBackup(encrypted) {
-    const payload = buildBackup();
-    let text = JSON.stringify(payload, null, 1);
-    let name = "seclusa-notes-" + stamp() + ".json";
-    // The password is asked for before the save picker opens, so a cancelled
-    // prompt never leaves an empty file behind. saveBlob falls back to a
-    // download if the browser refuses the picker without a user gesture.
-    if (encrypted) {
-      if (!cryptoBox.supported) {
-        toast(tr("toast_encryption_unavailable"));
-        return;
-      }
-      const password = await promptNewPassword();
-      if (!password) return;
-      try {
-        toast(tr("toast_encrypting"));
-        const box = await cryptoBox.encrypt(text, password);
-        text = JSON.stringify(box, null, 1);
-        name = "seclusa-notes-" + stamp() + ".enc.json";
-      } catch (e) {
-        toast(e instanceof BadData ? e.message : tr("toast_backup_failed"));
-        return;
-      }
-    }
-    const blob = new Blob([text], { type: "application/json" });
-    const how = await saveBlob(blob, name);
+    const prepared = await preparePayload(encrypted);
+    if (!prepared) return;
+    // Password is asked before the save picker opens, so a cancelled prompt
+    // never leaves an empty file behind.
+    const blob = new Blob([prepared.text], { type: "application/json" });
+    const how = await saveBlob(blob, prepared.name);
     if (how === null) return;
-    toast(encrypted ? tr("toast_backup_saved_enc") : tr("toast_backup_saved"));
+    markBackupDone();
+    if (how === "picker") {
+      toast(prepared.encrypted ? tr("toast_backup_saved_enc") : tr("toast_backup_saved"));
+    } else {
+      toast(prepared.encrypted ? tr("toast_backup_downloaded_enc") : tr("toast_backup_downloaded"));
+    }
   }
 
   async function importBackupText(text) {
@@ -159,13 +151,22 @@
   }
 
   function wireBackup() {
+    const shareBtn = document.getElementById("bu-share");
     const exportBtn = document.getElementById("bu-export");
-    const exportEncBtn = document.getElementById("bu-export-enc");
     const shareEncBtn = document.getElementById("bu-share-enc");
+    const exportEncBtn = document.getElementById("bu-export-enc");
     const importBtn = document.getElementById("bu-import");
     const input = document.getElementById("backup-file-input");
     if (!exportBtn || !importBtn || !input) return;
 
+    refreshBackupMeta();
+
+    if (shareBtn) {
+      shareBtn.onclick = () => {
+        closeSheet();
+        shareBackup(false).catch(() => toast(tr("toast_backup_failed")));
+      };
+    }
     exportBtn.onclick = () => {
       closeSheet();
       exportBackup(false).catch(() => toast(tr("toast_backup_failed")));
@@ -178,9 +179,6 @@
       };
     }
     if (shareEncBtn) {
-      // navigator.share with files is not universal; fall back to the download
-      // path when it is missing, but do not hide the button merely because
-      // canShare is unavailable or disagrees about an empty dummy file.
       shareEncBtn.hidden = !cryptoBox.supported;
       shareEncBtn.onclick = () => {
         closeSheet();
@@ -205,6 +203,8 @@
         toast(err instanceof BadData ? err.message : tr("toast_import_failed"));
       }
     };
+
+    window.refreshNotesBackupMeta = refreshBackupMeta;
   }
 
   if (document.readyState === "loading") {

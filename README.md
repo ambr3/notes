@@ -28,7 +28,7 @@ What Seclusa Notes added or replaced:
 
 ## Features
 
-- Version 0.2.8
+- Version 0.2.12
 - Write notes in plain text. Edit them, delete them, bin them
 - Checklist notes and drawing notes
 - Labels, reminders, archive and bin
@@ -36,8 +36,9 @@ What Seclusa Notes added or replaced:
   works with no internet connection
 - Everything is stored on your device. Clearing your browser data, or emptying
   the bin, removes it
-- Backup and restore from a JSON file (optional password encryption). Exports
-  use a `seclusa-notes` wrapper; plain Another Notes App files still import.
+- Backup and restore from a JSON file (optional password encryption). Separate
+  Share and Save / Download actions, plus a 30-day backup reminder. Exports use
+  a `seclusa-notes` wrapper; plain Another Notes App files still import.
 
 ## Usage
 

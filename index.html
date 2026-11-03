@@ -23,8 +23,8 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="src/theme-boot.js"></script>
-<link rel="stylesheet" href="seclusa-base.css?v=0.2.8">
-<link rel="stylesheet" href="app.css?v=0.2.8">
+<link rel="stylesheet" href="seclusa-base.css?v=0.2.12">
+<link rel="stylesheet" href="app.css?v=0.2.12">
 </head>
 <body class="pane-notes">
 
@@ -248,13 +248,15 @@
   <h3>About</h3>
   <div class="about-body">
     <p class="about-title">Seclusa Notes</p>
-    <p class="about-version">Version 0.2.8</p>
+    <p class="about-version">Version 0.2.12</p>
     <p>Private notes. Everything stays on this device — no accounts, no tracking, no servers.</p>
     <h4>Licence</h4>
     <p><strong>Apache-2.0.</strong> Derived from <strong>Another notes app</strong> by maltaisn
-      (<a href="https://github.com/maltaisn/another-notes-app">github.com/maltaisn/another-notes-app</a>);
+      (<a href="https://github.com/maltaisn/another-notes-app" target="_blank" rel="noopener noreferrer">github.com/maltaisn/another-notes-app</a>);
       the notes schema and ranking remain compatible. Not relicensed.</p>
-    <p>Details in the <a href="README.md">README</a> and <a href="PRIVACY_POLICY.md">privacy policy</a>.</p>
+    <p>Source: <a href="https://github.com/ambr3/notes" target="_blank" rel="noopener noreferrer">github.com/ambr3/notes</a>.
+      Details in the <a href="https://github.com/ambr3/notes/blob/main/README.md" target="_blank" rel="noopener noreferrer">README</a>
+      and <a href="https://github.com/ambr3/notes/blob/main/PRIVACY_POLICY.md" target="_blank" rel="noopener noreferrer">privacy policy</a>.</p>
     <h4>Privacy</h4>
     <p>No analytics, cookies, or network calls for your notes after the app shell is loaded.</p>
     <h4>Backup</h4>
@@ -263,25 +265,59 @@
   </div>
 </div>
 
+<div class="sheet" id="sheet-theme" role="dialog" aria-modal="false" aria-label="Theme" aria-hidden="true">
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <h3>Theme</h3>
+  <p class="note">Mode</p>
+  <div class="theme-mode-row" role="group" aria-label="Colour mode">
+    <button type="button" class="theme-chip" data-theme-opt="system" role="menuitemradio" aria-checked="false">System</button>
+    <button type="button" class="theme-chip" data-theme-opt="light" role="menuitemradio" aria-checked="false">Light</button>
+    <button type="button" class="theme-chip" data-theme-opt="dark" role="menuitemradio" aria-checked="false">Dark</button>
+  </div>
+  <p class="note">Background</p>
+  <div class="theme-swatches" role="group" aria-label="Background style">
+    <button type="button" class="theme-swatch" data-bg-opt="grid" aria-label="Lines" title="Orange lines" role="menuitemradio" aria-checked="false"></button>
+    <button type="button" class="theme-swatch" data-bg-opt="blue" aria-label="Blue" role="menuitemradio" aria-checked="false"></button>
+    <button type="button" class="theme-swatch" data-bg-opt="lightblue" aria-label="Light blue" role="menuitemradio" aria-checked="false"></button>
+    <button type="button" class="theme-swatch" data-bg-opt="teal" aria-label="Teal" role="menuitemradio" aria-checked="false"></button>
+    <button type="button" class="theme-swatch" data-bg-opt="green" aria-label="Green" role="menuitemradio" aria-checked="false"></button>
+    <button type="button" class="theme-swatch" data-bg-opt="yellow" aria-label="Yellow" role="menuitemradio" aria-checked="false"></button>
+    <button type="button" class="theme-swatch" data-bg-opt="orange" aria-label="Orange" role="menuitemradio" aria-checked="false"></button>
+    <button type="button" class="theme-swatch" data-bg-opt="red" aria-label="Red" role="menuitemradio" aria-checked="false"></button>
+    <button type="button" class="theme-swatch" data-bg-opt="purple" aria-label="Purple" role="menuitemradio" aria-checked="false"></button>
+    <button type="button" class="theme-swatch" data-bg-opt="black" aria-label="Black" role="menuitemradio" aria-checked="false"></button>
+    <button type="button" class="theme-swatch" data-bg-opt="white" aria-label="White" role="menuitemradio" aria-checked="false"></button>
+    <label class="theme-swatch theme-swatch-custom" id="bg-custom-swatch" data-bg-opt="custom" title="Custom colour" aria-label="Custom colour" role="menuitemradio" aria-checked="false">
+      <input type="color" id="bg-custom-picker" value="#5faff0" aria-label="Pick a custom background colour">
+    </label>
+  </div>
+</div>
+
 <div class="sheet" id="sheet-backup" role="dialog" aria-modal="false" aria-label="Backup" aria-hidden="true">
   <div class="sheet-handle" aria-hidden="true"></div>
   <h3>Backup</h3>
   <p class="note">One JSON file with your notes and labels. Stored only where you save or share it.</p>
   <p class="note about-warn"><strong>Warning:</strong> clearing browser data deletes everything. Export a backup before clearing or switching devices.</p>
+  <p class="note" id="bu-last">Last backup: never</p>
+  <p class="note about-warn" id="bu-nag" hidden></p>
+  <button class="row" id="bu-share">
+    <svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="17" cy="6" r="2.5"/><circle cx="17" cy="18" r="2.5"/><path d="M8.2 10.8l6.6-3.6M8.2 13.2l6.6 3.6"/></svg>
+    <span>Share backup…</span>
+  </button>
   <button class="row" id="bu-export">
     <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg>
-    <span>Export backup</span>
+    <span>Save / Download backup…</span>
   </button>
-  <button class="row" id="bu-export-enc">
-    <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-    <span>Export encrypted backup</span>
-  </button>
-  <p class="note">Encrypted backups use <strong>AES-256-GCM</strong> with a key from <strong>PBKDF2-HMAC-SHA512</strong> (210,000 iterations). Your password is never stored; if you lose it, the file cannot be opened.</p>
   <button class="row" id="bu-share-enc" hidden>
-    <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/><path d="M16 6h4M18 4v4"/></svg>
+    <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="18" cy="5" r="2.5"/><path d="M14.5 6.5l2.2-1.2"/></svg>
     <span>Share encrypted backup…</span>
   </button>
-  <p class="note">Share or save the file wherever you keep backups. This app never holds a folder handle; the copy only exists where you put it.</p>
+  <button class="row" id="bu-export-enc" hidden>
+    <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    <span>Save / Download encrypted…</span>
+  </button>
+  <p class="note">Encrypted backups use <strong>AES-256-GCM</strong> with a key from <strong>PBKDF2-HMAC-SHA512</strong> (210,000 iterations). Your password is never stored; if you lose it, the file cannot be opened.</p>
+  <p class="note">This app never holds a folder handle; the copy only exists where you put it.</p>
   <button class="row" id="bu-import">
     <svg viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg>
     <span>Restore backup</span>
@@ -293,9 +329,9 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h9l5 5v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M14 4v5h5"/></svg>
     <span>Notes</span>
   </button>
-  <button type="button" class="app-nav-btn" id="theme-toggle" aria-pressed="false" title="Switch theme">
+  <button type="button" class="app-nav-btn" id="theme-toggle" aria-pressed="false" title="Theme settings" aria-haspopup="dialog" aria-controls="sheet-theme">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z"/></svg>
-    <span id="theme-toggle-label">System</span>
+    <span id="theme-toggle-label">Theme</span>
   </button>
   <button type="button" class="app-nav-btn" data-action="backup" id="nav-backup" aria-haspopup="dialog" aria-controls="sheet-backup">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg>
@@ -317,6 +353,7 @@
 <script src="src/ui.js"></script>
 <script src="src/main.js"></script>
 <script src="src/backup.js"></script>
+<script src="src/theme-sheet.js"></script>
 <script src="src/shell.js"></script>
 </body>
 </html>

@@ -44,7 +44,7 @@ const PARTS = [
   "nextOccurrence", "nthWeekdayOfMonth", "describeRecurrence",
   "BadReminder", "createReminder", "findNextReminder", "postponeReminder",
   "markReminderDone", "isOverdue",
-  "toBase64", "fromBase64", "cryptoBox", "isEncryptedContainer",
+  "toBase64", "fromBase64", "backupFail", "cryptoBox", "isEncryptedContainer",
   "MIN_PASSWORD_LENGTH", "PBKDF2_HASH", "ENCRYPTED_VERSION",
   "EXPORT_SALT_BYTES", "PBKDF2_ITERATIONS", "PBKDF2_MAX_ITERATIONS", "GCM_IV_BYTES",
   "IMPORT_MAX_FILE_BYTES", "IMPORT_MAX_NOTES", "IMPORT_MAX_LABELS",

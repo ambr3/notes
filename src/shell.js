@@ -1,12 +1,10 @@
-/* App shell for Seclusa Notes: theme toggle, About and Backup sheets.
+/* App shell for Seclusa Notes: Theme sheet, About and Backup sheets.
 
-   Theme follows the shared Seclusa template: system / light / dark, stored
-   under ssc.pref_key_night_mode (same key as theme-boot.js). */
+   Theme mode: system / light / dark under ssc.pref_key_night_mode.
+   Background swatches via SeclusaThemeSheet (ssc.pref_key_bg). */
 (function () {
   const THEME_KEY = "ssc.pref_key_night_mode";
   const LEGACY_KEY = "privacy_calendar_theme";
-  const ORDER = ["system", "light", "dark"];
-  const LABELS = { system: "System", light: "Light", dark: "Dark" };
   const LIGHT = "#ffffff";
   const DARK = "#0a0a0a";
 
@@ -42,7 +40,6 @@
     const v = safeGet(THEME_KEY);
     if (v === "light" || v === "dark") return v;
     if (v === "system" || v === null || v === "") {
-      // Migrate the old combined-app key once, then drop it.
       const legacy = safeGet(LEGACY_KEY);
       if (legacy === "light") {
         safeSet(THEME_KEY, "light");
@@ -72,13 +69,12 @@
     document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
       m.setAttribute("content", colour);
     });
-    const next = ORDER[(ORDER.indexOf(mode) + 1) % ORDER.length];
     const label = document.getElementById("theme-toggle-label");
-    if (label) label.textContent = LABELS[next];
+    if (label) label.textContent = "Theme";
     const btn = document.getElementById("theme-toggle");
     if (btn) {
       btn.setAttribute("aria-pressed", mode === "system" ? "false" : "true");
-      btn.title = "Switch to " + LABELS[next].toLowerCase() + " theme";
+      btn.title = "Theme settings";
     }
   }
 
@@ -87,15 +83,6 @@
     else safeSet(THEME_KEY, mode);
     safeRemove(LEGACY_KEY);
     applyMode(mode);
-  }
-
-  const themeBtn = document.getElementById("theme-toggle");
-  if (themeBtn) {
-    themeBtn.addEventListener("click", () => {
-      const current = readMode();
-      const next = ORDER[(ORDER.indexOf(current) + 1) % ORDER.length];
-      setMode(next);
-    });
   }
 
   if (window.matchMedia) {
@@ -110,10 +97,13 @@
   const aboutBtn = document.getElementById("nav-about");
   const backupBtn = document.getElementById("nav-backup");
   if (aboutBtn) aboutBtn.addEventListener("click", () => showSheet("sheet-about"));
-  if (backupBtn) backupBtn.addEventListener("click", () => showSheet("sheet-backup"));
+  if (backupBtn) {
+    backupBtn.addEventListener("click", () => {
+      if (typeof window.refreshNotesBackupMeta === "function") window.refreshNotesBackupMeta();
+      showSheet("sheet-backup");
+    });
+  }
 
-  // The Notes item marks where you already are; tapping it scrolls the list
-  // back to the top (the list is the scroll container, not the pane).
   const notesBtn = document.querySelector('#app-nav .app-nav-btn[data-pane="notes"]');
   const listPane = document.querySelector("#pane-notes > main");
   if (notesBtn && listPane) {
@@ -122,4 +112,12 @@
 
   document.title = "Seclusa Notes";
   applyMode(readMode());
+
+  if (window.SeclusaThemeSheet) {
+    window.SeclusaThemeSheet.wire({
+      getMode: readMode,
+      setMode: setMode,
+      showSheet: typeof showSheet === "function" ? showSheet : undefined,
+    });
+  }
 })();

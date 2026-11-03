@@ -2,6 +2,32 @@
 
 All notable changes to **Seclusa Notes**.
 
+## 0.2.12 — 2026-11-03
+
+### Changed
+- Theme nav label is always **Theme** (mode chips stay System / Light / Dark in the sheet).
+- Orange ruled lines faded further.
+- About links point at the GitHub repo (`ambr3/notes`) for source, README, and privacy policy.
+
+## 0.2.11 — 2026-11-03
+
+### Added
+- Theme sheet: System / Light / Dark plus background swatches (lines, named colours, custom hex).
+
+## 0.2.10 — 2026-11-03
+
+### Fixed
+- Orange ruled-lines theme shows full-page again (opaque body background was covering it).
+
+## 0.2.9 — 2026-11-03
+
+### Added
+- Separate **Share backup…** and **Save / Download backup…** actions (plain and encrypted).
+- Last-backup label and a soft reminder after 30 days on the Backup sheet.
+
+### Changed
+- Share no longer falls back to download; if sharing is unavailable, use Save / Download.
+
 ## 0.2.8 — 2026-11-02
 
 ### Fixed
