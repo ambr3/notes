@@ -5,12 +5,13 @@
    Bump CACHE when the shell changes; the activate handler drops older caches.
 
    Only the shell is cached: no request or response body carrying note data
-   ever passes through here. */
+   ever passes through here. A saved drawing is a download from the page.
+   Launcher icons are part of the shell precache. */
 const CACHE_PREFIX = "seclusa-notes-shell-";
-const CACHE = CACHE_PREFIX + "v0.2.12";
+const CACHE = CACHE_PREFIX + "v0.2.13";
 const SHELL = ["./", "./index.html",
-  "./seclusa-base.css", "./seclusa-base.css?v=0.2.12",
-  "./app.css", "./app.css?v=0.2.12",
+  "./seclusa-base.css", "./seclusa-base.css?v=0.2.13",
+  "./app.css", "./app.css?v=0.2.13",
   "./src/theme-boot.js", "./src/core.js", "./src/crypto.js", "./src/recurrence.js", "./src/i18n.js",
   "./src/db.js", "./src/store.js", "./src/ui.js", "./src/main.js",
   "./src/backup.js", "./src/theme-sheet.js", "./src/shell.js",
@@ -26,8 +27,8 @@ const SHELL = ["./", "./index.html",
 /* Required for a usable offline launch. Optional icons and fonts may fail
    without aborting install. Every script and stylesheet is here: if one of
    them were missing from the cache, the app would load and then break. */
-const CRITICAL = ["./index.html", "./seclusa-base.css?v=0.2.12",
-  "./app.css?v=0.2.12",
+const CRITICAL = ["./index.html", "./seclusa-base.css?v=0.2.13",
+  "./app.css?v=0.2.13",
   "./src/theme-boot.js", "./src/core.js", "./src/crypto.js", "./src/recurrence.js", "./src/i18n.js",
   "./src/db.js", "./src/store.js", "./src/ui.js", "./src/main.js",
   "./src/backup.js", "./src/theme-sheet.js", "./src/shell.js"];
@@ -81,9 +82,9 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const data = event.notification.data;
-  const noteId = data && typeof data === "object" ? data.noteId : null;
-  const target = "./index.html" + (noteId !== undefined && noteId !== null
-    ? "?note=" + encodeURIComponent(String(noteId)) : "");
+  const rawId = data && typeof data === "object" ? data.noteId : null;
+  const noteId = Number.isSafeInteger(rawId) && rawId > 0 ? rawId : null;
+  const target = "./index.html" + (noteId === null ? "" : "?note=" + encodeURIComponent(String(noteId)));
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true })
       .then((list) => {

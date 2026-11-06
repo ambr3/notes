@@ -2,6 +2,19 @@
 
 All notable changes to **Seclusa Notes**.
 
+## 0.2.13 — 2026-11-06
+
+### Added
+- Save a drawing as a PNG. Black pad uses white dots, and white ink when the current ink is black.
+
+### Changed
+- Launcher icon is a black outline of a note on a white tile.
+
+### Fixed
+- A damaged note, label, reminder, or saved view no longer blanks the app.
+- A search that was open when you left is open again when you come back.
+- A bulk edit stays undoable if a write fails partway through.
+
 ## 0.2.12 — 2026-11-03
 
 ### Changed

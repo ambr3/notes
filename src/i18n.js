@@ -41,6 +41,8 @@ const DICTIONARIES = {
     empty_no_label: "No notes with this label", empty_no_search: "No notes match your search",
     filter_all: "All", type_text: "Text", type_list: "List", type_draw: "Draw",
     action_draw: "Draw", action_erase: "Erase", action_clear: "Clear", action_dots: "Dots",
+    action_black_pad: "Black", action_save_image: "Save image",
+    toast_image_saved: "Image saved.",
     action_select: "Select notes", action_select_all: "All", action_cancel: "Cancel",
     action_restore: "Restore", sel_archive: "Archive", sel_trash: "Trash", sel_restore: "Restore",
     select_count: "{n} selected", dialog_forever_body: "The selected notes will be deleted permanently.",
@@ -63,7 +65,6 @@ const DICTIONARIES = {
     toast_imported_newer: "file is from a newer version, some fields may be missing",
     toast_copied: "Copied to clipboard", toast_share_failed: "Could not share",
     toast_import_failed: "Could not read that file.",
-    toast_dates_reset: "Dates reset to now",
     toast_modified_now: "Modified date set to now",
     toast_storage_unavailable: "Storage unavailable, notes will not be saved.",
     toast_filter_cleared: "Filters cleared", toast_too_large: "That file is too large to import.",
@@ -83,8 +84,7 @@ const DICTIONARIES = {
     toast_encrypting: "Encrypting…",
     toast_encryption_unavailable: "Encryption is unavailable in this browser.",
     note_reminders_limit: "Reminders can only fire while this app is open. Anything due while it was closed is shown the next time you open it.",
-    action_undo_label: "Undo", action_redo_label: "Redo",
-    dialog_erase_title: "Erase everything?", dialog_erase_cancel: "Cancel", dialog_erase_ok: "Erase",
+    dialog_erase_title: "Erase everything?", dialog_erase_ok: "Erase",
     dialog_password_title: "Set a password", dialog_password_body:
       "The export is encrypted with this password. There is no way to recover the notes without it.",
     dialog_password_confirm_title: "Confirm password", dialog_password_mismatch:
@@ -94,11 +94,9 @@ const DICTIONARIES = {
       "This file is encrypted. Enter the password it was exported with.",
     dialog_decrypt_ok: "Decrypt and import", dialog_wrong_password:
       "Wrong password, or the file is damaged.",
-    language: "Language", locale_name: "English",
     action_new_note_undo: "New note",
     action_edit_note: "Edit note",
     action_set_reminder: "Set reminder",
-    action_import_file: "Import",
   }
 };
 

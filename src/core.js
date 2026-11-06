@@ -222,6 +222,9 @@ function asListNote(note) {
 }
 /* Same invariant the Android model enforces: type must match its metadata. */
 function normalizeNote(note) {
+  if (!note.metadata || typeof note.metadata !== "object") note.metadata = blankMetadata();
+  if (typeof note.title !== "string") note.title = "";
+  if (typeof note.content !== "string") note.content = "";
   if (note.type === TYPE.TEXT && note.metadata.kind !== "blank") {
     note.metadata = blankMetadata();
   }

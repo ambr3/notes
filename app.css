@@ -364,6 +364,8 @@ button.meta-pill:active{transform:scale(.98)}
 .draw-toolbar .draw-spacer{flex:1}
 .draw-canvas{height:calc(100dvh - 100px);width:auto;max-width:100%;aspect-ratio:4 / 3;margin:0 auto;background-color:#fff;background-image:radial-gradient(rgba(0,0,0,.22) 1.2px,transparent 1.2px);background-size:18px 18px;border:1px solid var(--border);border-radius:10px;touch-action:none;cursor:crosshair;display:block}
 .draw-canvas.no-dots{background-image:none}
+.draw-canvas.pad-black{background-color:#000;background-image:radial-gradient(rgba(255,255,255,.72) 1.2px,transparent 1.2px)}
+.draw-canvas.pad-black.no-dots{background-image:none}
 
 /* ---------- panels, dialogs ---------- */
 .scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .15s}

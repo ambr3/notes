@@ -1,4 +1,17 @@
 /* ------------------------------------------------------------- list render */
+function svgIcon(className, paths) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  if (className) svg.setAttribute("class", className);
+  for (const d of paths) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    svg.append(path);
+  }
+  return svg;
+}
+
 function autosize(el) {
   if (!el) return;
   // Growing the focused field can yank .editor-scroll back to the caret (bottom).
@@ -42,7 +55,8 @@ function render() {
   const labelSelect = $("label-filter");
   labelsEl.hidden = v.status === STATUS.DELETED;
   if (!labelsEl.hidden) {
-    const all = [...store.labels.values()].sort((a, b) => a.name.localeCompare(b.name));
+    const all = [...store.labels.values()].sort((a, b) =>
+      String(a.name || "").localeCompare(String(b.name || "")));
     labelSelect.replaceChildren();
     const add = (value, text) => {
       const o = document.createElement("option");
@@ -68,7 +82,7 @@ function render() {
   });
 
   // Surface that a filter is narrowing the list, and offer a way out.
-  const filtered = v.label !== null || v.search.trim() !== "";
+  const filtered = v.label !== null || (typeof v.search === "string" && v.search.trim() !== "");
   $("mi-clear-filter").hidden = !filtered;
   const rt = $("mi-reminders-text");
   if (reminders.permission === "granted") rt.textContent = tr("action_reminders_enabled");
@@ -78,7 +92,7 @@ function render() {
 
   const notes = store.visible();
   const list = $("list");
-  list.innerHTML = "";
+  list.replaceChildren();
   $("empty").hidden = notes.length > 0;
   $("empty-text").textContent =
     v.search ? tr("empty_no_search")
@@ -215,7 +229,10 @@ function renderCard(note, v) {
   const foot = document.createElement("div");
   foot.className = "card-foot";
   if (note.pinned === PINNED.PINNED) {
-    foot.innerHTML = '<svg class="pin-ico" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z"/></svg>';
+    foot.append(svgIcon("pin-ico", [
+      "M12 17v5",
+      "M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z",
+    ]));
   }
   const when = document.createElement("span");
   when.textContent = noteStatusWord(note) + " " + showDate(
@@ -226,7 +243,10 @@ function renderCard(note, v) {
     const r = note.reminder;
     const tag = document.createElement("span");
     tag.className = "reminder-tag" + (r.done ? " done" : isOverdue(r, Date.now()) ? " overdue" : "");
-    tag.innerHTML = '<svg class="bell-ico" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.3 20a2 2 0 0 0 3.4 0"/></svg>';
+    tag.append(svgIcon("bell-ico", [
+      "M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8",
+      "M10.3 20a2 2 0 0 0 3.4 0",
+    ]));
     tag.append(document.createTextNode(describeReminder(r)));
     tag.onclick = (e) => { e.stopPropagation(); openEditor(note.id); };
     foot.append(tag);
@@ -480,17 +500,64 @@ function renderEditorBody() {
 }
 
 /* --------------------------------------------------------------- draw editor */
-const DRAW_COLORS = ["#111111", "#e5484d", "#46a758", "#3e63dd", "#f5d90a", "#d6409f", "#00b8d9"];
+const DRAW_INK = "#111111";
+const DRAW_PAPER = "#ffffff";
+const DRAW_COLORS = [DRAW_INK, DRAW_PAPER, "#e5484d", "#46a758", "#3e63dd", "#f5d90a", "#d6409f", "#00b8d9"];
 const DRAW_WIDTHS = [2, 4, 8, 14];
 let drawCtx = null;
 let drawActive = false;
-let drawColor = DRAW_COLORS[0];
+let drawColor = DRAW_INK;
 let drawWidth = DRAW_WIDTHS[1];
 let drawLast = null;
 let drawEraser = false;
 /* Dot grid is a guide only: it is CSS behind the canvas, so it never ends up
    in the saved PNG. The choice is remembered in the database. */
 let drawDots = true;
+let drawBlack = false;
+
+function imageFileName(title) {
+  let name = typeof title === "string" ? title : "";
+  name = name.replace(/[\u0000-\u001f\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!name) name = "drawing";
+  if (name.length > 60) name = name.slice(0, 60).trim();
+  if (!name) name = "drawing";
+  return name + ".png";
+}
+
+function applyDrawPad(canvas) {
+  canvas.classList.toggle("no-dots", !drawDots);
+  canvas.classList.toggle("pad-black", !!drawBlack);
+}
+
+function saveDrawingImage(canvas) {
+  if (!canvas || canvas.width < 2 || canvas.height < 2 || typeof downloadBlob !== "function") {
+    toast(tr("toast_save_failed"));
+    return;
+  }
+  let blob;
+  try {
+    const out = document.createElement("canvas");
+    out.width = canvas.width;
+    out.height = canvas.height;
+    const ctx = out.getContext("2d");
+    ctx.fillStyle = drawBlack ? "#000000" : "#ffffff";
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(canvas, 0, 0);
+    const data = out.toDataURL("image/png");
+    const bin = atob(data.slice(data.indexOf(",") + 1));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    blob = new Blob([bytes], { type: "image/png" });
+  } catch (e) {
+    toast(tr("toast_save_failed"));
+    return;
+  }
+  const base = imageFileName(editing && editing.title);
+  const day = typeof backupDateStamp === "function" ? backupDateStamp() : "";
+  const file = day ? base.replace(/\.png$/, "-" + day + ".png") : base;
+  downloadBlob(blob, file);
+  toast(tr("toast_image_saved"));
+}
 
 function drawPoint(e) {
   const canvas = drawCtx && drawCtx.canvas;
@@ -587,13 +654,14 @@ function refitDrawCanvas() {
 
 function renderDrawEditor() {
   const wrap = $("draw-editor");
-  wrap.innerHTML = "";
+  wrap.replaceChildren();
   drawCtx = null;
   drawActive = false;
   drawLast = null;
 
   const canvas = document.createElement("canvas");
-  canvas.className = "draw-canvas" + (drawDots ? "" : " no-dots");
+  canvas.className = "draw-canvas";
+  applyDrawPad(canvas);
   const ctx = canvas.getContext("2d");
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -666,11 +734,32 @@ function renderDrawEditor() {
   dotsBtn.setAttribute("aria-pressed", String(drawDots));
   dotsBtn.onclick = () => {
     drawDots = !drawDots;
-    canvas.classList.toggle("no-dots", !drawDots);
+    applyDrawPad(canvas);
     dotsBtn.setAttribute("aria-pressed", String(drawDots));
     db.setMetaSafe("drawDots", drawDots);
   };
   toolbar.append(dotsBtn);
+
+  const blackBtn = document.createElement("button");
+  blackBtn.type = "button";
+  blackBtn.textContent = tr("action_black_pad");
+  blackBtn.setAttribute("aria-label", "Black pad with white dots");
+  blackBtn.setAttribute("aria-pressed", String(drawBlack));
+  blackBtn.onclick = () => {
+    drawBlack = !drawBlack;
+    applyDrawPad(canvas);
+    blackBtn.setAttribute("aria-pressed", String(drawBlack));
+    db.setMetaSafe("drawBlack", drawBlack);
+    if (drawBlack && drawColor === DRAW_INK) selectColor(swatches[1], DRAW_PAPER);
+    else if (!drawBlack && drawColor === DRAW_PAPER) selectColor(swatches[0], DRAW_INK);
+  };
+  toolbar.append(blackBtn);
+
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.textContent = tr("action_save_image");
+  saveBtn.onclick = () => saveDrawingImage(canvas);
+  toolbar.append(saveBtn);
 
   const spacer = document.createElement("span");
   spacer.className = "draw-spacer";
@@ -687,7 +776,8 @@ function renderDrawEditor() {
   toolbar.append(clearBtn);
 
   // Paint the initial selection onto the buttons once they exist.
-  selectColor(swatches[0], DRAW_COLORS[0]);
+  if (drawBlack) selectColor(swatches[1], DRAW_PAPER);
+  else selectColor(swatches[0], DRAW_INK);
   widths[1].setAttribute("aria-pressed", "true");
 
   canvas.addEventListener("pointerdown", (e) => {
@@ -748,7 +838,7 @@ if (typeof window !== "undefined") {
 
 function renderListEditor() {
   const listWrap = $("list-editor");
-  listWrap.innerHTML = "";
+  listWrap.replaceChildren();
   const items = listItems(editing);
   const readRows = () => {
     const rows = [...listWrap.querySelectorAll(".list-item")];
@@ -1208,14 +1298,23 @@ function diffAgainst(refs) {
 
 /* Runs a mutation and records the diff. `subject` groups consecutive edits to
    the same note so typing collapses into one undo step. */
+function recordDiff(refs, label, subject) {
+  if (history._suppress) return;
+  const diff = diffAgainst(refs);
+  if (!diff) return;
+  history.push({ label, subject: subject || null, ...diff, at: Date.now() });
+}
+
 async function act(label, fn, subject) {
   const refs = captureRefs();
-  const result = await fn();
-  if (history._suppress) return result;
-  const diff = diffAgainst(refs);
-  // A no-op action must not occupy an undo slot.
-  if (!diff) return result;
-  history.push({ label, subject: subject || null, ...diff, at: Date.now() });
+  let result;
+  try {
+    result = await fn();
+  } catch (e) {
+    recordDiff(refs, label, subject);
+    throw e;
+  }
+  recordDiff(refs, label, subject);
   return result;
 }
 
@@ -1299,7 +1398,7 @@ function syncWeekdayVisibility() {
 
 function renderWeekdayChips() {
   const wrap = $("rem-weekdays");
-  wrap.innerHTML = "";
+  wrap.replaceChildren();
   for (let d = 0; d < 7; d++) {
     const b = document.createElement("button");
     b.className = "day-chip";
@@ -1482,8 +1581,9 @@ function refreshReminderRow() {
 /* --------------------------------------------------------- label editing */
 function renderLabelPicker() {
   const wrap = $("label-list");
-  wrap.innerHTML = "";
-  for (const l of [...store.labels.values()].sort((a, b) => a.name.localeCompare(b.name))) {
+  wrap.replaceChildren();
+  for (const l of [...store.labels.values()].sort((a, b) =>
+    String(a.name || "").localeCompare(String(b.name || "")))) {
     const line = document.createElement("div");
     line.className = "label-pick-row";
 
@@ -1491,12 +1591,17 @@ function renderLabelPicker() {
     row.type = "button";
     row.className = "row";
     const dot = document.createElement("span");
-    dot.style.cssText = "width:11px;height:11px;border-radius:50%;flex:none";
+    dot.style.width = "11px";
+    dot.style.height = "11px";
+    dot.style.borderRadius = "50%";
+    dot.style.flex = "none";
     dot.style.background = store.labelColor(l.id);
     row.append(dot, document.createTextNode(l.name));
     const on = editing.labels.includes(l.id);
     const mark = document.createElement("span");
-    mark.style.cssText = "margin-left:auto;font-weight:600;color:" + (on ? "var(--accent)" : "transparent");
+    mark.style.marginLeft = "auto";
+    mark.style.fontWeight = "600";
+    mark.style.color = on ? "var(--accent)" : "transparent";
     mark.textContent = "✓";
     row.append(mark);
     row.onclick = async () => {
@@ -1510,7 +1615,7 @@ function renderLabelPicker() {
     del.type = "button";
     del.className = "iconbtn";
     del.setAttribute("aria-label", tr("action_remove_label") + ": " + l.name);
-    del.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>';
+    del.append(svgIcon(null, ["M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"]));
     del.onclick = async (e) => {
       e.stopPropagation();
       const ok = await confirmDialog(tr("dialog_delete_label_title"),
@@ -1574,8 +1679,16 @@ async function eraseAll() {
   // "Erase all notes" be undone straight after the fact.
   history.clear();
   reminders.reschedule();
+  store.view.status = STATUS.ACTIVE;
   store.view.search = "";
   store.view.label = null;
+  store.persistView();
+  const search = $("search-input");
+  if (search) search.value = "";
+  const bar = $("searchbar");
+  if (bar) bar.classList.remove("open");
+  const searchBtn = $("btn-search");
+  if (searchBtn) searchBtn.setAttribute("aria-pressed", "false");
   i18n.setLocale("en");
   render();
   toast(tr("toast_erased"));
@@ -1601,6 +1714,7 @@ function promptPassword(titleKey, bodyKey, okKey) {
       if (settled) return;
       settled = true;
       cleanup();
+      $("pw-input").value = "";
       if (dlg.open) dlg.close();
       resolve(v);
     };

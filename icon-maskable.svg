@@ -1,11 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Seclusa Notes">
   <rect width="1024" height="1024" fill="#ffffff"/>
-  <g transform="translate(144 144) scale(0.72)">
-    <path fill="#0a0a0a" d="M225 164h410l164 164v532c0 22-18 40-40 40H265c-22 0-40-18-40-40V204c0-22 18-40 40-40z"/>
-    <path fill="#ffffff" d="M635 164l164 164H675c-22 0-40-18-40-40V164z"/>
-    <path fill="#0a0a0a" d="M647 176l140 140H687c-11 0-20-9-20-20V176z"/>
-    <rect x="320" y="430" width="384" height="36" rx="8" fill="#ffffff"/>
-    <rect x="320" y="553" width="384" height="36" rx="8" fill="#ffffff"/>
-    <rect x="320" y="676" width="384" height="36" rx="8" fill="#ffffff"/>
+  <g transform="translate(512 512) scale(0.86) translate(-512 -512)">
+  <path fill="none" stroke="#0a0a0a" stroke-width="36" stroke-linejoin="round" stroke-linecap="round" d="M268 180H624L804 360V812a48 48 0 0 1-48 48H268a48 48 0 0 1-48-48V228a48 48 0 0 1 48-48z"/>
+  <path fill="none" stroke="#0a0a0a" stroke-width="36" stroke-linejoin="round" stroke-linecap="round" d="M624 180V312a48 48 0 0 0 48 48H804"/>
+  <path fill="none" stroke="#0a0a0a" stroke-width="28" stroke-linecap="round" d="M300 500H720"/>
+  <path fill="none" stroke="#0a0a0a" stroke-width="28" stroke-linecap="round" d="M300 620H720"/>
+  <path fill="none" stroke="#0a0a0a" stroke-width="28" stroke-linecap="round" d="M300 740H560"/>
   </g>
 </svg>

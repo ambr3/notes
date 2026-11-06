@@ -42,7 +42,9 @@ function wire() {
     render();
   };
   $("search-input").oninput = (e) => {
-    store.view.search = e.target.value;
+    const value = String(e.target.value || "").slice(0, 2000);
+    if (e.target.value !== value) e.target.value = value;
+    store.view.search = value;
     store.persistView();
     render();
   };
@@ -257,11 +259,18 @@ function wire() {
     toast(tr("toast_storage_unavailable"));
   }
   drawDots = (await db.getMeta("drawDots").catch(() => null)) !== false;
+  drawBlack = (await db.getMeta("drawBlack").catch(() => null)) === true;
   // Reminders only fire once notifications are allowed, and anything that
   // elapsed while the app was shut is caught up here.
   reminders.permission = reminders.supported ? Notification.permission : "unsupported";
   await reminders.catchUp().catch(() => {});
   render();
+  const savedSearch = store.view.search;
+  if (typeof savedSearch === "string" && savedSearch) {
+    $("search-input").value = savedSearch;
+    $("searchbar").classList.add("open");
+    $("btn-search").setAttribute("aria-pressed", "true");
+  }
 
   // /index.html?new=1 opens straight into a fresh note; ?note=<id> is how a
   // tapped notification lands on the right note.
@@ -282,9 +291,10 @@ function wire() {
   // a spoofed payload can at most re-open a note the user already has.
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("message", (e) => {
+      if (e.origin && e.origin !== location.origin) return;
       if (!e.data || e.data.type !== "open-note") return;
       const wanted = e.data.noteId;
-      if (Number.isSafeInteger(wanted) && store.notes.has(wanted)) openEditor(wanted);
+      if (Number.isSafeInteger(wanted) && wanted > 0 && store.notes.has(wanted)) openEditor(wanted);
     });
   }
 

@@ -1,3 +1,25 @@
+function sanitizeView(view) {
+  const next = {
+    status: STATUS.ACTIVE,
+    label: null,
+    search: "",
+    field: SORT_FIELD.MODIFIED,
+    dir: SORT_DIR.DESC,
+  };
+  if (!view || typeof view !== "object") return next;
+  if (view.status === STATUS.ACTIVE || view.status === STATUS.ARCHIVED || view.status === STATUS.DELETED) {
+    next.status = view.status;
+  }
+  if (Number.isSafeInteger(view.label) && view.label > 0) next.label = view.label;
+  if (typeof view.search === "string") next.search = view.search.slice(0, 2000);
+  if (view.field === SORT_FIELD.ADDED || view.field === SORT_FIELD.MODIFIED
+      || view.field === SORT_FIELD.TITLE || view.field === SORT_FIELD.CUSTOM) {
+    next.field = view.field;
+  }
+  if (view.dir === SORT_DIR.ASC || view.dir === SORT_DIR.DESC) next.dir = view.dir;
+  return next;
+}
+
 /* ------------------------------------------------------------------ store */
 const store = {
   notes: new Map(),
@@ -15,20 +37,46 @@ const store = {
     const meta = await db.getMeta("nextId");
     // Re-check shape and drawings: IndexedDB is attacker-writable from the
     // same origin, and older rows may predate the import validators.
-    this.notes = new Map(notes.map((raw) => {
-      const n = raw && typeof raw === "object" ? raw : { id: 0 };
-      if (!n.metadata || typeof n.metadata !== "object") n.metadata = blankMetadata();
+    this.notes = new Map();
+    const dropNoteIds = [];
+    for (const raw of notes) {
+      if (!raw || typeof raw !== "object") continue;
+      const n = raw;
+      if (!Number.isSafeInteger(n.id) || n.id <= 0) {
+        if (n.id !== undefined && n.id !== null) dropNoteIds.push(n.id);
+        continue;
+      }
       if (!Array.isArray(n.labels)) n.labels = [];
       normalizeNote(n);
       if (n.type === TYPE.DRAW && n.metadata && n.metadata.kind === "draw") {
         n.metadata = { kind: "draw", data: validDrawing(n.metadata.data) };
       }
-      return [n.id, n];
-    }));
-    this.labels = new Map(labels.map((l) => [l.id, l]));
-    this.nextId = meta || this._inferNextId();
+      if (n.reminder && !reminderUsable(n.reminder)) n.reminder = null;
+      this.notes.set(n.id, n);
+    }
+    this.labels = new Map();
+    const dropLabelIds = [];
+    for (const raw of labels) {
+      if (!raw || typeof raw !== "object") continue;
+      if (!Number.isSafeInteger(raw.id) || raw.id <= 0 || typeof raw.name !== "string" || !raw.name.trim()) {
+        if (raw.id !== undefined && raw.id !== null) dropLabelIds.push(raw.id);
+        continue;
+      }
+      this.labels.set(raw.id, { id: raw.id, name: raw.name, hidden: raw.hidden === true });
+    }
+    for (const id of dropNoteIds) db.del("notes", id).catch(() => {});
+    for (const id of dropLabelIds) db.del("labels", id).catch(() => {});
+    this.nextId = Number.isSafeInteger(meta) && meta > 0 ? meta : this._inferNextId();
     const view = await db.getMeta("view");
-    if (view) Object.assign(this.view, view);
+    const clean = sanitizeView(view);
+    this.view.status = clean.status;
+    this.view.label = clean.label;
+    this.view.search = clean.search;
+    this.view.field = clean.field;
+    this.view.dir = clean.dir;
+    const viewKeys = view && typeof view === "object" ? Object.keys(view) : [];
+    const viewOk = viewKeys.length === 5 && viewKeys.every((k) => view[k] === clean[k]);
+    if (!viewOk) this.persistView();
   },
   _inferNextId() {
     let max = 0;
@@ -174,7 +222,8 @@ const store = {
   },
 
   visible() {
-    const q = this.view.search.trim().toLowerCase();
+    const rawSearch = this.view.search;
+    const q = (typeof rawSearch === "string" ? rawSearch : "").trim().toLowerCase();
     let out = [];
     for (const note of this.notes.values()) {
       if (note.status !== this.view.status) continue;
@@ -402,7 +451,7 @@ function reminderFromSurrogate(s) {
   let recurrence = null;
   if (typeof s.recurrence === "string" && s.recurrence.trim()) {
     recurrence = parseRRule(s.recurrence);
-    if (!recurrence) throw new BadData("unsupported recurrence: " + s.recurrence);
+    if (!recurrence) throw new BadData("unsupported recurrence");
   }
   return {
     start, next, recurrence,

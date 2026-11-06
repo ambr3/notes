@@ -43,7 +43,8 @@ const PARTS = [
   "DAY_CODES", "DAY_NAMES", "DAY_SHORT", "REC", "formatRRule", "parseRRule",
   "nextOccurrence", "nthWeekdayOfMonth", "describeRecurrence",
   "BadReminder", "createReminder", "findNextReminder", "postponeReminder",
-  "markReminderDone", "isOverdue",
+  "markReminderDone", "isOverdue", "reminderUsable", "imageFileName",
+  "sanitizeView",
   "toBase64", "fromBase64", "backupFail", "cryptoBox", "isEncryptedContainer",
   "MIN_PASSWORD_LENGTH", "PBKDF2_HASH", "ENCRYPTED_VERSION",
   "EXPORT_SALT_BYTES", "PBKDF2_ITERATIONS", "PBKDF2_MAX_ITERATIONS", "GCM_IV_BYTES",
@@ -58,6 +59,8 @@ const INT_MID = 0x80;
 const STATUS = { ACTIVE: 0, ARCHIVED: 1, DELETED: 2 };
 const PINNED = { CANT_PIN: 0, UNPINNED: 1, PINNED: 2 };
 const TYPE = { TEXT: 0, LIST: 1, DRAW: 2 };
+const SORT_FIELD = { ADDED: 0, MODIFIED: 1, TITLE: 2, CUSTOM: 3 };
+const SORT_DIR = { ASC: 0, DESC: 1 };
 const BULLET = "\\u2022";
 // Recurrence labels go through the i18n layer in the app; stub it here.
 const tr = (k) => k;
@@ -73,7 +76,7 @@ const load = new Function(
   "asTextNote,asListNote,normalizeNote,rankOf,validRank,clampText,enumValue,toSurrogate," +
   "reminderToSurrogate,fromSurrogate,reminderFromSurrogate,serialize,formatRRule,parseRRule," +
   "nextOccurrence,describeRecurrence,createReminder,findNextReminder,postponeReminder," +
-  "markReminderDone,isOverdue,toBase64,fromBase64,cryptoBox,isEncryptedContainer," +
+  "markReminderDone,isOverdue,reminderUsable,imageFileName,sanitizeView,toBase64,fromBase64,cryptoBox,isEncryptedContainer," +
   "listMetadata,blankMetadata,BadData,PBKDF2_ITERATIONS,PBKDF2_MAX_ITERATIONS," +
   "EXPORT_SALT_BYTES,GCM_IV_BYTES,IMPORT_MAX_NOTES,IMPORT_MAX_LABELS,IMPORT_MAX_DRAWING_CHARS,validDrawing,STORE};"
 )(TextEncoder, TextDecoder, webcrypto, Blob, undefined, undefined, undefined, btoa, atob);
@@ -173,6 +176,7 @@ const eq = (name, actual, expected) =>
   eq("null recurrence formats to null", fmt(null), null);
   eq("empty rule parses to null", parse(""), null);
   eq("unknown FREQ is rejected", parse("FREQ=NONSENSE"), null);
+  eq("an oversized rule is rejected", parse("FREQ=DAILY;" + "X".repeat(600)), null);
 
   // Daily must keep the time of day and step whole days.
   const start = new Date(2025, 0, 15, 9, 30, 0, 0).getTime();
@@ -321,6 +325,10 @@ const eq = (name, actual, expected) =>
   eq("checked state is truncated to the item count",
     load.normalizeNote({ type: 1, metadata: { kind: "list", checked: [true, true, true] }, status: 0, pinned: 1, content: "a" })
       .metadata.checked.length, 1);
+  eq("a list note with no content normalises",
+    load.normalizeNote({ type: 1, metadata: null, status: 0, pinned: 1 }).content, "");
+  eq("a non-string title becomes empty",
+    load.normalizeNote({ type: 0, title: 12, metadata: { kind: "blank" }, status: 0, pinned: 1, content: "" }).title, "");
 
   // Encrypted container shape.
   const start = new Date(2026, 2, 14, 15, 45, 0, 0).getTime();
@@ -340,6 +348,34 @@ const eq = (name, actual, expected) =>
     load.reminderFromSurrogate({ start: load.fmtDate(start), next: load.fmtDate(start), recurrence: "FREQ=NEVER" });
   } catch (e) { msg = e.message; }
   check("an unsupported recurrence is rejected", /unsupported recurrence/.test(msg), msg);
+  let longMsg = "";
+  try {
+    load.reminderFromSurrogate({
+      start: load.fmtDate(start), next: load.fmtDate(start),
+      recurrence: "FREQ=DAILY;" + "A".repeat(600),
+    });
+  } catch (e) { longMsg = e.message; }
+  eq("a huge recurrence is rejected without echoing it", longMsg, "unsupported recurrence");
+}
+
+/* ------------------------------------------------ stored view and reminders */
+{
+  const clean = load.sanitizeView(null);
+  eq("a missing view uses the notes folder", clean.status, 0);
+  eq("a missing view sorts by modified", clean.field, 1);
+  const kept = load.sanitizeView({ status: 2, label: 4, search: "milk", field: 2, dir: 0 });
+  eq("a real folder is kept", kept.status, 2);
+  eq("a real label id is kept", kept.label, 4);
+  eq("a real sort field is kept", kept.field, 2);
+  eq("search is capped", load.sanitizeView({ search: "x".repeat(3000) }).search.length, 2000);
+  eq("a bad status falls back", load.sanitizeView({ status: 9, search: 5 }).status, 0);
+  eq("a one-off reminder is usable", load.reminderUsable({ start: 1, next: 2, recurrence: null }), true);
+  eq("a reminder needs a real time", load.reminderUsable({ next: "soon" }), false);
+  eq("an unknown frequency is rejected",
+    load.reminderUsable({ next: 1, recurrence: { freq: "HOURLY" } }), false);
+  eq("a drawing file uses the note title", load.imageFileName("Kitchen plan"), "Kitchen plan.png");
+  eq("a blank drawing title becomes drawing.png", load.imageFileName("   "), "drawing.png");
+  eq("a drawing file name drops line breaks", load.imageFileName("a\r\nb"), "a b.png");
 }
 
 /* ------------------------------------------------------- input validation */

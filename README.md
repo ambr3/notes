@@ -28,7 +28,7 @@ What Seclusa Notes added or replaced:
 
 ## Features
 
-- Version 0.2.12
+- Version 0.2.13
 - Write notes in plain text. Edit them, delete them, bin them
 - Checklist notes and drawing notes
 - Labels, reminders, archive and bin
@@ -48,8 +48,9 @@ close without typing.
 To add it to your home screen, open your browser's menu and choose "Add to Home
 Screen".
 
-Theme cycles **System → Light → Dark** (same preference key as other Seclusa
-apps).
+Theme opens a sheet: **System**, **Light**, or **Dark**, plus a page background
+(orange lines, a named colour, or a custom hex). The choice stays on this
+device under the same preference keys as other Seclusa apps.
 
 ## HTTP Observatory
 

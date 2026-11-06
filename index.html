@@ -7,10 +7,10 @@
 <meta name="referrer" content="no-referrer">
 <meta
   http-equiv="Content-Security-Policy"
-  content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; worker-src 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
+  content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; worker-src 'self'; frame-ancestors 'none'; upgrade-insecure-requests; require-trusted-types-for 'script'">
 <meta
   http-equiv="Permissions-Policy"
-  content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), midi=(), serial=(), display-capture=(), accelerometer=(), gyroscope=(), magnetometer=(), idle-detection=(), screen-wake-lock=()">
+  content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), midi=(), serial=(), display-capture=(), accelerometer=(), gyroscope=(), magnetometer=(), idle-detection=(), screen-wake-lock=(), interest-cohort=(), browsing-topics=(), attribution-reporting=()">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
@@ -23,8 +23,8 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="src/theme-boot.js"></script>
-<link rel="stylesheet" href="seclusa-base.css?v=0.2.12">
-<link rel="stylesheet" href="app.css?v=0.2.12">
+<link rel="stylesheet" href="seclusa-base.css?v=0.2.13">
+<link rel="stylesheet" href="app.css?v=0.2.13">
 </head>
 <body class="pane-notes">
 
@@ -223,7 +223,7 @@
   <h3 id="pw-title">Set a password</h3>
   <div class="body">
     <div id="pw-text">The export is encrypted with this password. There is no way to recover the notes without it.</div>
-    <input type="password" id="pw-input" autocomplete="current-password">
+    <input type="password" id="pw-input" autocomplete="off" spellcheck="false">
   </div>
   <div class="acts">
     <button class="ghost" id="pw-cancel">Cancel</button>
@@ -248,7 +248,7 @@
   <h3>About</h3>
   <div class="about-body">
     <p class="about-title">Seclusa Notes</p>
-    <p class="about-version">Version 0.2.12</p>
+    <p class="about-version">Version 0.2.13</p>
     <p>Private notes. Everything stays on this device — no accounts, no tracking, no servers.</p>
     <h4>Licence</h4>
     <p><strong>Apache-2.0.</strong> Derived from <strong>Another notes app</strong> by maltaisn

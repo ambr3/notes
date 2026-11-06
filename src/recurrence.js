@@ -38,6 +38,7 @@ function formatRRule(r) {
 
 function parseRRule(s) {
   if (!s) return null;
+  if (String(s).length > 512) return null;
   // Collected first and interpreted after, because the meaning of BYDAY depends
   // on FREQ and an RRULE does not require FREQ to appear first.
   const parts = {};
@@ -54,7 +55,7 @@ function parseRRule(s) {
     byday: null, bymonthday: null, bymonth: null, nth: null,
   };
   if (parts.BYDAY) {
-    const codes = parts.BYDAY.split(",").map((c) => c.trim().toUpperCase()).filter(Boolean);
+    const codes = parts.BYDAY.split(",").slice(0, 14).map((c) => c.trim().toUpperCase()).filter(Boolean);
     if (freq === "WEEKLY") {
       const days = [];
       for (const c of codes) {
@@ -246,6 +247,25 @@ function postponeReminder(r, when) {
 const markReminderDone = (r) => ({ ...r, done: true });
 
 const isOverdue = (r, now) => !r.done && r.next <= now;
+
+function reminderUsable(r) {
+  if (!r || typeof r !== "object") return false;
+  if (typeof r.next !== "number" || !Number.isFinite(r.next)) return false;
+  if (r.start != null && (typeof r.start !== "number" || !Number.isFinite(r.start))) return false;
+  if (r.recurrence == null) return true;
+  const rec = r.recurrence;
+  if (typeof rec !== "object") return false;
+  if (rec.freq !== "DAILY" && rec.freq !== "WEEKLY" && rec.freq !== "MONTHLY" && rec.freq !== "YEARLY") return false;
+  if (rec.interval != null && !(typeof rec.interval === "number" && Number.isFinite(rec.interval) && rec.interval >= 1 && rec.interval <= 100000)) return false;
+  if (Array.isArray(rec.byday)) {
+    if (rec.byday.length > 14) rec.byday.length = 14;
+    for (let i = 0; i < rec.byday.length; i++) {
+      const d = rec.byday[i];
+      if (rec.freq === "WEEKLY" && (typeof d !== "number" || d < 0 || d > 6)) return false;
+    }
+  }
+  return true;
+}
 const reminderKey = (noteId, next) => noteId + "@" + next;
 
 function describeReminder(r) {
