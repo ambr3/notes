@@ -6,12 +6,12 @@
 
    Only the shell is cached: no request or response body carrying note data
    ever passes through here. A saved drawing is a download from the page.
-   Launcher icons are part of the shell precache. */
+   Launcher icons are part of the shell precache (pencil mark). */
 const CACHE_PREFIX = "seclusa-notes-shell-";
-const CACHE = CACHE_PREFIX + "v0.2.13";
+const CACHE = CACHE_PREFIX + "v0.2.14";
 const SHELL = ["./", "./index.html",
-  "./seclusa-base.css", "./seclusa-base.css?v=0.2.13",
-  "./app.css", "./app.css?v=0.2.13",
+  "./seclusa-base.css", "./seclusa-base.css?v=0.2.14",
+  "./app.css", "./app.css?v=0.2.14",
   "./src/theme-boot.js", "./src/core.js", "./src/crypto.js", "./src/recurrence.js", "./src/i18n.js",
   "./src/db.js", "./src/store.js", "./src/ui.js", "./src/main.js",
   "./src/backup.js", "./src/theme-sheet.js", "./src/shell.js",
@@ -27,8 +27,8 @@ const SHELL = ["./", "./index.html",
 /* Required for a usable offline launch. Optional icons and fonts may fail
    without aborting install. Every script and stylesheet is here: if one of
    them were missing from the cache, the app would load and then break. */
-const CRITICAL = ["./index.html", "./seclusa-base.css?v=0.2.13",
-  "./app.css?v=0.2.13",
+const CRITICAL = ["./index.html", "./seclusa-base.css?v=0.2.14",
+  "./app.css?v=0.2.14",
   "./src/theme-boot.js", "./src/core.js", "./src/crypto.js", "./src/recurrence.js", "./src/i18n.js",
   "./src/db.js", "./src/store.js", "./src/ui.js", "./src/main.js",
   "./src/backup.js", "./src/theme-sheet.js", "./src/shell.js"];

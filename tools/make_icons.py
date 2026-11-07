@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate Seclusa Notes icons (black line mark on a white tile).
+"""Regenerate Seclusa Notes icons (black pencil on a white tile).
 
     python3 tools/make_icons.py
 
@@ -14,11 +14,15 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 
-MARK = """  <path fill="none" stroke="#0a0a0a" stroke-width="36" stroke-linejoin="round" stroke-linecap="round" d="M268 180H624L804 360V812a48 48 0 0 1-48 48H268a48 48 0 0 1-48-48V228a48 48 0 0 1 48-48z"/>
-  <path fill="none" stroke="#0a0a0a" stroke-width="36" stroke-linejoin="round" stroke-linecap="round" d="M624 180V312a48 48 0 0 0 48 48H804"/>
-  <path fill="none" stroke="#0a0a0a" stroke-width="28" stroke-linecap="round" d="M300 500H720"/>
-  <path fill="none" stroke="#0a0a0a" stroke-width="28" stroke-linecap="round" d="M300 620H720"/>
-  <path fill="none" stroke="#0a0a0a" stroke-width="28" stroke-linecap="round" d="M300 740H560"/>
+# Classic pencil: eraser, ferrule, body, wood tip, graphite point.
+MARK = """  <g transform="translate(512 512) rotate(-40)" fill="#0a0a0a">
+    <rect x="-52" y="-420" width="104" height="88" rx="22"/>
+    <rect x="-56" y="-332" width="112" height="70" rx="8"/>
+    <rect x="-48" y="-318" width="96" height="14" fill="#ffffff"/>
+    <rect x="-48" y="-292" width="96" height="14" fill="#ffffff"/>
+    <rect x="-52" y="-262" width="104" height="430"/>
+    <path d="M-52 160 L0 390 L52 160 Z"/>
+  </g>
 """
 
 SVG = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Seclusa Notes">

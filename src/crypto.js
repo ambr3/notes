@@ -54,7 +54,17 @@ const cryptoBox = {
   supported: typeof crypto !== "undefined" && !!crypto.subtle,
 
   async deriveKey(password, salt, params) {
+    if (typeof password !== "string" || password.length > 1024) {
+      backupFail("Password is too long.");
+    }
     let iterations = (params && params.iterations > 0) ? params.iterations : PBKDF2_ITERATIONS;
+    if (typeof iterations !== "number" || !Number.isFinite(iterations)) {
+      backupFail("This file's key derivation settings are not supported.");
+    }
+    iterations = Math.floor(iterations);
+    if (iterations < 1) {
+      backupFail("This file's key derivation settings are not supported.");
+    }
     if (iterations > PBKDF2_MAX_ITERATIONS) {
       backupFail("This file asks for too many key-derivation rounds.");
     }
@@ -105,7 +115,7 @@ const cryptoBox = {
     } catch (e) {
       backupFail("This file is not a valid encrypted export.");
     }
-    if (!salt.length || iv.length !== GCM_IV_BYTES || sealed.length <= 16) {
+    if (salt.length < 16 || salt.length > 1024 || iv.length !== GCM_IV_BYTES || sealed.length <= 16) {
       backupFail("This file is missing its encryption data.");
     }
     const key = await this.deriveKey(password, salt, container.kdf);

@@ -2,6 +2,14 @@
 
 All notable changes to **Seclusa Notes**.
 
+## 0.2.14 — 2026-11-07
+
+### Changed
+- Launcher icon is a black pencil on a white tile (favicon, apple-touch, any, and maskable).
+
+### Fixed
+- Encrypted backup import rejects oversized passwords and odd key-derivation settings earlier.
+
 ## 0.2.13 — 2026-11-06
 
 ### Added
