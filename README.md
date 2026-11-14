@@ -28,7 +28,7 @@ What Seclusa Notes added or replaced:
 
 ## Features
 
-- Version 0.2.14
+- Version 0.2.15
 - Write notes in plain text. Edit them, delete them, bin them
 - Checklist notes and drawing notes
 - Labels, reminders, archive and bin

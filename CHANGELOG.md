@@ -2,6 +2,11 @@
 
 All notable changes to **Seclusa Notes**.
 
+## 0.2.15 — 2026-11-14
+
+### Fixed
+- iOS PWA status bar uses `black` instead of `black-translucent` so the top no longer blurs over the page.
+
 ## 0.2.14 — 2026-11-07
 
 ### Changed
